@@ -26,36 +26,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Gönderileri yükle
 async function loadPosts() {
     try {
-        // Gerçek uygulamada fetch('/data/posts.json') kullanılır
-        // Demo için örnek veri
-        const response = await fetch('/data/posts.json').catch(() => {
-            // Eğer dosya yoksa örnek veri döndür
-            return {
-                ok: true,
-                json: async () => demoPostsData
-            };
-        });
+        // Backend API'den gönderileri çek
+        const response = await fetch('http://localhost:3001/api/posts');
+
+        if (!response.ok) {
+            throw new Error('API yanıt vermedi');
+        }
 
         const data = await response.json();
         allPosts = data.posts || [];
         filteredPosts = [...allPosts];
+        console.log(`${allPosts.length} gönderi yüklendi`);
 
         // Etiketleri topla ve filtre menüsünü oluştur
         createTagFilters();
     } catch (error) {
         console.error('Gönderiler yüklenirken hata:', error);
-        allPosts = demoPostsData.posts;
-        filteredPosts = [...allPosts];
-        createTagFilters();
+
+        // Hata durumunda kullanıcıya bilgi ver
+        postsContainer.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                <h3>Gönderiler yüklenemedi</h3>
+                <p>Backend sunucunun çalıştığından emin olun.</p>
+                <small>Hata: ${error.message}</small>
+                <br><br>
+                <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: #6B73FF; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    Tekrar Dene
+                </button>
+            </div>
+        `;
+
+        allPosts = [];
+        filteredPosts = [];
     }
 }
 
 // Profil bilgilerini yükle
 async function loadProfile() {
     try {
-        const response = await fetch('/data/profile.json').catch(() => {
-            return { ok: false };
-        });
+        const response = await fetch('http://localhost:3001/api/profile');
 
         if (response.ok) {
             const profile = await response.json();
@@ -270,51 +279,3 @@ function escapeHtml(text) {
     };
     return text.replace(/[&<>"']/g, m => map[m]);
 }
-
-// Demo veri - gerçek uygulamada posts.json'dan gelecek
-const demoPostsData = {
-    posts: [
-        {
-            id: 1,
-            title: "STM32 ile RTOS Kullanımı",
-            summary: "FreeRTOS kullanarak STM32 mikrodenetleyicilerde çoklu görev yönetimi nasıl yapılır?",
-            content: "# STM32 ve FreeRTOS\n\nBu yazıda STM32F4 serisi mikrodenetleyicilerde FreeRTOS kullanımını inceleyeceğiz...",
-            tags: ["STM32", "RTOS", "FreeRTOS", "C"]
-        },
-        {
-            id: 2,
-            title: "ESP32 ile IoT Projesi",
-            summary: "ESP32 kullanarak bulut tabanlı sıcaklık ve nem takip sistemi geliştirme",
-            content: "# ESP32 IoT Sensör Projesi\n\nESP32'nin WiFi özelliklerini kullanarak sensör verilerini buluta gönderme...",
-            tags: ["ESP32", "IoT", "MQTT", "C++"]
-        },
-        {
-            id: 3,
-            title: "Embedded Linux ile GPIO Kontrolü",
-            summary: "Raspberry Pi üzerinde C dilinde GPIO pin kontrolü ve kesme yönetimi",
-            content: "# Linux GPIO Programlama\n\nEmbedded Linux sistemlerde GPIO kontrolü için sysfs ve libgpiod kullanımı...",
-            tags: ["Linux", "GPIO", "Raspberry Pi", "C"]
-        },
-        {
-            id: 4,
-            title: "CAN Bus Protokolü Uygulaması",
-            summary: "Otomotiv projelerinde CAN bus haberleşme protokolünün implementasyonu",
-            content: "# CAN Bus Haberleşme\n\nController Area Network (CAN) protokolünün gömülü sistemlerde kullanımı...",
-            tags: ["CAN", "Automotive", "Protocol", "C"]
-        },
-        {
-            id: 5,
-            title: "Low Power Design Teknikleri",
-            summary: "Pil ile çalışan gömülü sistemlerde güç tüketimi optimizasyonu",
-            content: "# Düşük Güç Tasarımı\n\nMikrodenetleyicilerde sleep modları ve güç yönetimi teknikleri...",
-            tags: ["Low Power", "Battery", "STM32", "Optimization"]
-        },
-        {
-            id: 6,
-            title: "I2C ve SPI Protokol Karşılaştırması",
-            summary: "Gömülü sistemlerde yaygın kullanılan I2C ve SPI protokollerinin avantaj ve dezavantajları",
-            content: "# I2C vs SPI\n\nİki popüler seri haberleşme protokolünün detaylı karşılaştırması...",
-            tags: ["I2C", "SPI", "Protocol", "Communication"]
-        }
-    ]
-};

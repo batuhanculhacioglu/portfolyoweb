@@ -23,29 +23,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Gönderileri yükle
 async function loadPosts() {
     try {
-        // Gerçek uygulamada localStorage veya backend API kullanılabilir
-        const savedPosts = localStorage.getItem('blogPosts');
-        if (savedPosts) {
-            posts = JSON.parse(savedPosts);
-        } else {
-            // Demo veri kullan
-            posts = getDemoPosts();
-            savePosts();
+        const response = await fetch('http://localhost:3001/api/posts');
+
+        if (!response.ok) {
+            throw new Error('API yanıt vermedi');
         }
+
+        const data = await response.json();
+        posts = data.posts || [];
+        console.log(`${posts.length} gönderi yüklendi`);
     } catch (error) {
         console.error('Gönderiler yüklenirken hata:', error);
-        posts = getDemoPosts();
-    }
-}
-
-// Gönderileri kaydet (localStorage'a)
-function savePosts() {
-    try {
-        localStorage.setItem('blogPosts', JSON.stringify(posts));
-        console.log('Gönderiler kaydedildi');
-    } catch (error) {
-        console.error('Kaydetme hatası:', error);
-        alert('Gönderiler kaydedilemedi. Tarayıcı depolama alanı dolu olabilir.');
+        posts = [];
+        showNotification('Gönderiler yüklenemedi. Backend sunucuyu kontrol edin.', 'error');
     }
 }
 
@@ -75,50 +65,79 @@ function setupEventListeners() {
 }
 
 // Yeni gönderi ekle
-function handleNewPost(e) {
+async function handleNewPost(e) {
     e.preventDefault();
 
     const formData = new FormData(postForm);
     const newPost = {
-        id: Date.now(), // Basit ID oluşturma
         title: formData.get('title'),
         summary: formData.get('summary'),
         content: formData.get('content'),
-        tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag),
-        date: new Date().toISOString(),
-        views: 0
+        tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag)
     };
 
-    posts.unshift(newPost); // En başa ekle
-    savePosts();
-    renderAdminPosts();
-    postForm.reset();
+    try {
+        const response = await fetch('http://localhost:3001/api/posts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newPost)
+        });
 
-    // Başarı mesajı
-    showNotification('Yeni gönderi başarıyla eklendi!', 'success');
+        if (!response.ok) {
+            throw new Error('Gönderi eklenemedi');
+        }
+
+        const createdPost = await response.json();
+        posts.unshift(createdPost);
+        renderAdminPosts();
+        postForm.reset();
+
+        showNotification('Yeni gönderi başarıyla eklendi!', 'success');
+    } catch (error) {
+        console.error('Gönderi ekleme hatası:', error);
+        showNotification('Gönderi eklenemedi. Hata: ' + error.message, 'error');
+    }
 }
 
 // Gönderiyi düzenle
-function handleEditPost(e) {
+async function handleEditPost(e) {
     e.preventDefault();
 
     const formData = new FormData(editForm);
-    const postIndex = posts.findIndex(p => p.id === editingPostId);
+    const updatedPost = {
+        title: formData.get('title'),
+        summary: formData.get('summary'),
+        content: formData.get('content'),
+        tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag)
+    };
 
-    if (postIndex !== -1) {
-        posts[postIndex] = {
-            ...posts[postIndex],
-            title: formData.get('title'),
-            summary: formData.get('summary'),
-            content: formData.get('content'),
-            tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag),
-            updatedDate: new Date().toISOString()
-        };
+    try {
+        const response = await fetch(`http://localhost:3001/api/posts/${editingPostId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedPost)
+        });
 
-        savePosts();
-        renderAdminPosts();
-        closeEditModal();
-        showNotification('Gönderi başarıyla güncellendi!', 'success');
+        if (!response.ok) {
+            throw new Error('Gönderi güncellenemedi');
+        }
+
+        const updated = await response.json();
+        const postIndex = posts.findIndex(p => p.id === editingPostId);
+
+        if (postIndex !== -1) {
+            posts[postIndex] = updated;
+            renderAdminPosts();
+            closeEditModal();
+            showNotification('Gönderi başarıyla güncellendi!', 'success');
+        }
+    } catch (error) {
+        console.error('Güncelleme hatası:', error);
+        showNotification('Gönderi güncellenemedi. Hata: ' + error.message, 'error');
     }
 }
 
@@ -186,15 +205,27 @@ function closeEditModal() {
 }
 
 // Gönderiyi sil
-function deletePost(postId) {
+async function deletePost(postId) {
     if (!confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) {
         return;
     }
 
-    posts = posts.filter(p => p.id !== postId);
-    savePosts();
-    renderAdminPosts();
-    showNotification('Gönderi başarıyla silindi!', 'success');
+    try {
+        const response = await fetch(`http://localhost:3001/api/posts/${postId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Gönderi silinemedi');
+        }
+
+        posts = posts.filter(p => p.id !== postId);
+        renderAdminPosts();
+        showNotification('Gönderi başarıyla silindi!', 'success');
+    } catch (error) {
+        console.error('Silme hatası:', error);
+        showNotification('Gönderi silinemedi. Hata: ' + error.message, 'error');
+    }
 }
 
 // Bildirim göster
@@ -237,53 +268,6 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
-}
-
-// Demo gönderiler
-function getDemoPosts() {
-    return [
-        {
-            id: 1,
-            title: "STM32 ile RTOS Kullanımı",
-            summary: "FreeRTOS kullanarak STM32 mikrodenetleyicilerde çoklu görev yönetimi nasıl yapılır?",
-            content: `# STM32 ve FreeRTOS
-
-Bu yazıda STM32F4 serisi mikrodenetleyicilerde FreeRTOS kullanımını inceleyeceğiz.
-
-## Kurulum
-
-1. STM32CubeIDE'yi açın
-2. Yeni proje oluşturun
-3. Middleware sekmesinden FreeRTOS'u aktif edin
-
-## Örnek Kod
-
-\`\`\`c
-void StartDefaultTask(void const * argument) {
-    for(;;) {
-        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-        osDelay(1000);
-    }
-}
-\`\`\`
-
-Detaylı bilgi için...`,
-            tags: ["STM32", "RTOS", "FreeRTOS", "C"],
-            date: new Date().toISOString(),
-            views: 156
-        },
-        {
-            id: 2,
-            title: "ESP32 ile IoT Projesi",
-            summary: "ESP32 kullanarak bulut tabanlı sıcaklık ve nem takip sistemi geliştirme",
-            content: `# ESP32 IoT Sensör Projesi
-
-ESP32'nin WiFi özelliklerini kullanarak sensör verilerini buluta gönderme...`,
-            tags: ["ESP32", "IoT", "MQTT", "C++"],
-            date: new Date(Date.now() - 86400000).toISOString(),
-            views: 234
-        }
-    ];
 }
 
 // Global fonksiyonlar (onclick için)

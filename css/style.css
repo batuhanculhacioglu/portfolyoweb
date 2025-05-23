@@ -107,6 +107,35 @@ body {
     transform: translateY(-2px);
 }
 
+/* Admin Panel Linki */
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.admin-link:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateX(2px);
+}
+
+.admin-link svg {
+    transition: transform 0.3s ease;
+}
+
+.admin-link:hover svg {
+    transform: rotate(45deg);
+}
+
 /* Filtre Bölümü */
 .filter-section {
     background: var(--bg-secondary);

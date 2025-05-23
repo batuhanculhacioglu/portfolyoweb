@@ -1,34 +1,82 @@
 {
-    "posts": [
-        {
-            "id": 1,
-            "title": "STM32 ile RTOS Kullanımı",
-            "summary": "FreeRTOS kullanarak STM32 mikrodenetleyicilerde çoklu görev yönetimi nasıl yapılır?",
-            "content": "# STM32 ve FreeRTOS\n\nBu yazıda STM32F4 serisi mikrodenetleyicilerde FreeRTOS kullanımını inceleyeceğiz.\n\n## Neden RTOS?\n\nGömülü sistemlerde gerçek zamanlı işletim sistemi kullanmak, özellikle karmaşık projelerde büyük avantajlar sağlar:\n\n- **Çoklu görev yönetimi**: Birden fazla görevi eş zamanlı yönetebilme\n- **Zaman kritik uygulamalar**: Deterministik davranış\n- **Kaynak yönetimi**: Bellek ve CPU kullanımının optimize edilmesi\n\n## Kurulum Adımları\n\n1. STM32CubeIDE'yi açın\n2. Yeni proje oluşturun\n3. Middleware sekmesinden FreeRTOS'u aktif edin\n4. Task'ları ve önceliklerini ayarlayın\n\n## Örnek Kod\n\n```c\n// LED yanıp sönme görevi\nvoid StartLEDTask(void const * argument) {\n    for(;;) {\n        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);\n        osDelay(1000);\n    }\n}\n\n// UART üzerinden veri gönderme görevi\nvoid StartUARTTask(void const * argument) {\n    char msg[] = \"Hello from FreeRTOS\\r\\n\";\n    for(;;) {\n        HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 100);\n        osDelay(2000);\n    }\n}\n```\n\n## Dikkat Edilmesi Gerekenler\n\n- Stack boyutlarını doğru ayarlayın\n- Task önceliklerini mantıklı belirleyin\n- Kritik bölgelerde interrupt'ları devre dışı bırakın\n\nDaha fazla bilgi için FreeRTOS dokümantasyonunu inceleyebilirsiniz.",
-            "tags": [
-                "STM32",
-                "RTOS",
-                "FreeRTOS",
-                "C",
-                "Embedded"
-            ],
-            "date": "2025-01-15T10:30:00Z",
-            "views": 156
-        },
-        {
-            "id": 2,
-            "title": "ESP32 ile IoT Projesi",
-            "summary": "ESP32 kullanarak bulut tabanlı sıcaklık ve nem takip sistemi geliştirme",
-            "content": "# ESP32 IoT Sensör Projesi\n\nESP32'nin WiFi özelliklerini kullanarak DHT22 sensöründen okunan verileri MQTT protokolü ile buluta gönderme projesi.\n\n## Gerekli Malzemeler\n\n- ESP32 DevKit\n- DHT22 Sıcaklık ve Nem Sensörü\n- 10K Pull-up Direnci\n- Jumper Kablolar\n\n## Bağlantı Şeması\n\n```\nESP32    DHT22\n-----------------\n3.3V  -> VCC\nGND   -> GND\nGPIO4 -> DATA\n```\n\n## Arduino Kodu\n\n```cpp\n#include <WiFi.h>\n#include <PubSubClient.h>\n#include <DHT.h>\n\n#define DHTPIN 4\n#define DHTTYPE DHT22\n\nconst char* ssid = \"WiFi_SSID\";\nconst char* password = \"WiFi_PASSWORD\";\nconst char* mqtt_server = \"broker.mqtt.com\";\n\nDHT dht(DHTPIN, DHTTYPE);\nWiFiClient espClient;\nPubSubClient client(espClient);\n\nvoid setup() {\n    Serial.begin(115200);\n    dht.begin();\n    setup_wifi();\n    client.setServer(mqtt_server, 1883);\n}\n\nvoid loop() {\n    if (!client.connected()) {\n        reconnect();\n    }\n    client.loop();\n    \n    float h = dht.readHumidity();\n    float t = dht.readTemperature();\n    \n    if (!isnan(h) && !isnan(t)) {\n        String payload = \"{\\\"temperature\\\":\" + String(t) + \",\\\"humidity\\\":\" + String(h) + \"}\";\n        client.publish(\"esp32/sensor\", payload.c_str());\n    }\n    \n    delay(5000);\n}\n```\n\n## MQTT Broker Kurulumu\n\nProje için Mosquitto MQTT broker kullanabilirsiniz. Alternatif olarak CloudMQTT gibi bulut servisleri de tercih edilebilir.\n\n## Veri Görselleştirme\n\nToplanan veriler Node-RED veya Grafana gibi araçlarla görselleştirilebilir.",
-            "tags": [
-                "ESP32",
-                "IoT",
-                "MQTT",
-                "DHT22",
-                "Arduino"
-            ],
-            "date": "2025-01-10T14:20:00Z",
-            "views": 234
-        }
-    ]
+  "posts": [
+    {
+      "id": 1,
+      "title": "STM32 ile RTOS Kullanımı",
+      "summary": "FreeRTOS kullanarak STM32 mikrodenetleyicilerde çoklu görev yönetimi nasıl yapılır?",
+      "content": "# STM32 ve FreeRTOS\n\nBu yazıda STM32F4 serisi mikrodenetleyicilerde FreeRTOS kullanımını inceleyeceğiz.\n\n## Neden RTOS?\n\nGömülü sistemlerde gerçek zamanlı işletim sistemi kullanmak, özellikle karmaşık projelerde büyük avantajlar sağlar:\n\n- **Çoklu görev yönetimi**: Birden fazla görevi eş zamanlı yönetebilme\n- **Zaman kritik uygulamalar**: Deterministik davranış\n- **Kaynak yönetimi**: Bellek ve CPU kullanımının optimize edilmesi\n\n## Kurulum Adımları\n\n1. STM32CubeIDE'yi açın\n2. Yeni proje oluşturun\n3. Middleware sekmesinden FreeRTOS'u aktif edin\n4. Task'ları ve önceliklerini ayarlayın\n\n## Örnek Kod\n\n```c\n// LED yanıp sönme görevi\nvoid StartLEDTask(void const * argument) {\n    for(;;) {\n        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);\n        osDelay(1000);\n    }\n}\n\n// UART üzerinden veri gönderme görevi\nvoid StartUARTTask(void const * argument) {\n    char msg[] = \"Hello from FreeRTOS\\r\\n\";\n    for(;;) {\n        HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 100);\n        osDelay(2000);\n    }\n}\n```\n\n## Dikkat Edilmesi Gerekenler\n\n- Stack boyutlarını doğru ayarlayın\n- Task önceliklerini mantıklı belirleyin\n- Kritik bölgelerde interrupt'ları devre dışı bırakın\n\nDaha fazla bilgi için FreeRTOS dokümantasyonunu inceleyebilirsiniz.",
+      "tags": [
+        "STM32",
+        "RTOS",
+        "FreeRTOS",
+        "C",
+        "Embedded"
+      ],
+      "date": "2025-01-15T10:30:00Z",
+      "views": 156
+    },
+    {
+      "id": 2,
+      "title": "ESP32 ile IoT Projesi",
+      "summary": "ESP32 kullanarak bulut tabanlı sıcaklık ve nem takip sistemi geliştirme",
+      "content": "# ESP32 IoT Sensör Projesi\n\nESP32'nin WiFi özelliklerini kullanarak DHT22 sensöründen okunan verileri MQTT protokolü ile buluta gönderme projesi.\n\n## Gerekli Malzemeler\n\n- ESP32 DevKit\n- DHT22 Sıcaklık ve Nem Sensörü\n- 10K Pull-up Direnci\n- Jumper Kablolar\n\n## Bağlantı Şeması\n\n```\nESP32    DHT22\n-----------------\n3.3V  -> VCC\nGND   -> GND\nGPIO4 -> DATA\n```\n\n## Arduino Kodu\n\n```cpp\n#include <WiFi.h>\n#include <PubSubClient.h>\n#include <DHT.h>\n\n#define DHTPIN 4\n#define DHTTYPE DHT22\n\nconst char* ssid = \"WiFi_SSID\";\nconst char* password = \"WiFi_PASSWORD\";\nconst char* mqtt_server = \"broker.mqtt.com\";\n\nDHT dht(DHTPIN, DHTTYPE);\nWiFiClient espClient;\nPubSubClient client(espClient);\n\nvoid setup() {\n    Serial.begin(115200);\n    dht.begin();\n    setup_wifi();\n    client.setServer(mqtt_server, 1883);\n}\n\nvoid loop() {\n    if (!client.connected()) {\n        reconnect();\n    }\n    client.loop();\n    \n    float h = dht.readHumidity();\n    float t = dht.readTemperature();\n    \n    if (!isnan(h) && !isnan(t)) {\n        String payload = \"{\\\"temperature\\\":\" + String(t) + \",\\\"humidity\\\":\" + String(h) + \"}\";\n        client.publish(\"esp32/sensor\", payload.c_str());\n    }\n    \n    delay(5000);\n}\n```\n\n## MQTT Broker Kurulumu\n\nProje için Mosquitto MQTT broker kullanabilirsiniz. Alternatif olarak CloudMQTT gibi bulut servisleri de tercih edilebilir.\n\n## Veri Görselleştirme\n\nToplanan veriler Node-RED veya Grafana gibi araçlarla görselleştirilebilir.",
+      "tags": [
+        "ESP32",
+        "IoT",
+        "MQTT",
+        "DHT22",
+        "Arduino"
+      ],
+      "date": "2025-01-10T14:20:00Z",
+      "views": 234
+    },
+    {
+      "id": 3,
+      "title": "Embedded Linux ile GPIO Kontrolü",
+      "summary": "Raspberry Pi üzerinde C dilinde GPIO pin kontrolü ve kesme yönetimi",
+      "content": "# Linux GPIO Programlama\n\nEmbedded Linux sistemlerde GPIO kontrolü için sysfs ve libgpiod kullanımı...",
+      "tags": [
+        "Linux",
+        "GPIO",
+        "Raspberry Pi",
+        "C"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "CAN Bus Protokolü Uygulaması",
+      "summary": "Otomotiv projelerinde CAN bus haberleşme protokolünün implementasyonu",
+      "content": "# CAN Bus Haberleşme\n\nController Area Network (CAN) protokolünün gömülü sistemlerde kullanımı...",
+      "tags": [
+        "CAN",
+        "Automotive",
+        "Protocol",
+        "C"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Low Power Design Teknikleri",
+      "summary": "Pil ile çalışan gömülü sistemlerde güç tüketimi optimizasyonu",
+      "content": "# Düşük Güç Tasarımı\n\nMikrodenetleyicilerde sleep modları ve güç yönetimi teknikleri...",
+      "tags": [
+        "Low Power",
+        "Battery",
+        "STM32",
+        "Optimization"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "I2C ve SPI Protokol Karşılaştırması",
+      "summary": "Gömülü sistemlerde yaygın kullanılan I2C ve SPI protokollerinin avantaj ve dezavantajları",
+      "content": "# I2C vs SPI\n\nİki popüler seri haberleşme protokolünün detaylı karşılaştırması...",
+      "tags": [
+        "I2C",
+        "SPI",
+        "Protocol",
+        "Communication"
+      ]
+    }
+  ]
 }
