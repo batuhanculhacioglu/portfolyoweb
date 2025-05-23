@@ -1,0 +1,42 @@
+{
+    "name": "Ad Soyad",
+    "title": "Gömülü Yazılım Mühendisi",
+    "bio": "Mikrodenetleyiciler, RTOS ve IoT sistemleri üzerine çalışıyorum. C/C++ ve Python ile projeler geliştiriyorum.",
+    "image": "assets/img/profile.jpg",
+    "email": "email@example.com",
+    "github": "https://github.com/kullaniciadi",
+    "linkedin": "https://linkedin.com/in/kullaniciadi",
+    "skills": [
+        "C/C++",
+        "Python",
+        "STM32",
+        "ESP32",
+        "FreeRTOS",
+        "Linux",
+        "Git",
+        "MQTT",
+        "CAN Bus",
+        "I2C/SPI"
+    ],
+    "experience": [
+        {
+            "title": "Senior Gömülü Yazılım Mühendisi",
+            "company": "Teknoloji A.Ş.",
+            "period": "2020 - Günümüz",
+            "description": "IoT cihazları ve endüstriyel kontrol sistemleri geliştirme"
+        },
+        {
+            "title": "Gömülü Yazılım Mühendisi",
+            "company": "Elektronik Ltd.",
+            "period": "2018 - 2020",
+            "description": "Otomotiv elektroniği ve CAN bus uygulamaları"
+        }
+    ],
+    "education": [
+        {
+            "degree": "Elektrik-Elektronik Mühendisliği",
+            "school": "Üniversite Adı",
+            "period": "2014 - 2018"
+        }
+    ]
+}

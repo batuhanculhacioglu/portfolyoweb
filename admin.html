@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli - Portfolyo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Admin Paneli</h1>
+            <a href="index.html" class="back-link">← Ana Sayfaya Dön</a>
+        </header>
+
+        <div class="admin-content">
+            <!-- Yeni Gönderi Formu -->
+            <section class="admin-section">
+                <h2>Yeni Gönderi Ekle</h2>
+                <form id="postForm" class="post-form">
+                    <div class="form-group">
+                        <label for="postTitle">Başlık</label>
+                        <input type="text" id="postTitle" name="title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postSummary">Kısa Açıklama</label>
+                        <textarea id="postSummary" name="summary" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postContent">İçerik (Markdown destekler)</label>
+                        <textarea id="postContent" name="content" rows="10" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postTags">Etiketler (virgülle ayırın)</label>
+                        <input type="text" id="postTags" name="tags" placeholder="örn: C++, STM32, IoT">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Gönderi Ekle</button>
+                        <button type="button" class="btn btn-secondary" id="clearForm">Temizle</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Mevcut Gönderiler -->
+            <section class="admin-section">
+                <h2>Mevcut Gönderiler</h2>
+                <div class="posts-list" id="adminPostsList">
+                    <!-- Dinamik olarak yüklenecek -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Düzenleme Modal -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Gönderiyi Düzenle</h3>
+                    <button class="modal-close" id="closeModal">&times;</button>
+                </div>
+                <form id="editForm" class="post-form">
+                    <input type="hidden" id="editPostId">
+
+                    <div class="form-group">
+                        <label for="editTitle">Başlık</label>
+                        <input type="text" id="editTitle" name="title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editSummary">Kısa Açıklama</label>
+                        <textarea id="editSummary" name="summary" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editContent">İçerik</label>
+                        <textarea id="editContent" name="content" rows="10" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editTags">Etiketler</label>
+                        <input type="text" id="editTags" name="tags">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Güncelle</button>
+                        <button type="button" class="btn btn-secondary" id="cancelEdit">İptal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+
+</html>
