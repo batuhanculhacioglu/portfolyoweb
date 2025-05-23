@@ -13,7 +13,8 @@
         "Embedded"
       ],
       "date": "2025-01-15T10:30:00Z",
-      "views": 156
+      "views": 162,
+      "updatedDate": "2025-05-23T21:24:55.900Z"
     },
     {
       "id": 2,
@@ -28,7 +29,8 @@
         "Arduino"
       ],
       "date": "2025-01-10T14:20:00Z",
-      "views": 234
+      "views": 239,
+      "updatedDate": "2025-05-23T21:20:36.121Z"
     },
     {
       "id": 3,
@@ -40,7 +42,9 @@
         "GPIO",
         "Raspberry Pi",
         "C"
-      ]
+      ],
+      "views": 2,
+      "updatedDate": "2025-05-23T21:20:35.519Z"
     },
     {
       "id": 4,
@@ -52,7 +56,9 @@
         "Automotive",
         "Protocol",
         "C"
-      ]
+      ],
+      "views": 2,
+      "updatedDate": "2025-05-23T21:20:35.029Z"
     },
     {
       "id": 5,
@@ -64,7 +70,9 @@
         "Battery",
         "STM32",
         "Optimization"
-      ]
+      ],
+      "views": 2,
+      "updatedDate": "2025-05-23T21:20:32.923Z"
     },
     {
       "id": 6,
@@ -76,7 +84,9 @@
         "SPI",
         "Protocol",
         "Communication"
-      ]
+      ],
+      "views": 1,
+      "updatedDate": "2025-05-23T21:20:29.542Z"
     }
   ]
 }

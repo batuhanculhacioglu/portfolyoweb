@@ -116,6 +116,7 @@ app.put('/api/posts/:id', async (req, res) => {
             summary: req.body.summary,
             content: req.body.content,
             tags: req.body.tags || [],
+            views: req.body.views !== undefined ? req.body.views : data.posts[postIndex].views,
             updatedDate: new Date().toISOString()
         };
 

@@ -204,11 +204,6 @@ function createPostCard(post) {
     const card = document.createElement('div');
     card.className = 'post-card';
 
-    // Markdown içeriği HTML'e çevir (marked.js varsa)
-    const contentPreview = typeof marked !== 'undefined'
-        ? marked.parse(post.content).substring(0, 200) + '...'
-        : post.content.substring(0, 200) + '...';
-
     card.innerHTML = `
         <h3 class="post-title">${escapeHtml(post.title)}</h3>
         <p class="post-summary">${escapeHtml(post.summary)}</p>
@@ -219,20 +214,12 @@ function createPostCard(post) {
         </div>
     `;
 
-    // Tıklama olayı - detay sayfası veya modal açılabilir
+    // Tıklama olayı - detay sayfasına yönlendir
     card.addEventListener('click', () => {
-        showPostDetail(post);
+        window.location.href = `post.html?id=${post.id}`;
     });
 
     return card;
-}
-
-// Gönderi detayını göster (ileride modal veya yeni sayfa olabilir)
-function showPostDetail(post) {
-    // Şimdilik console'a yazdır
-    console.log('Gönderi detayı:', post);
-    // İleride modal veya yeni sayfa implementasyonu eklenebilir
-    alert(`"${post.title}" gönderisi açılıyor...`);
 }
 
 // Daha fazla gönderi yükle
