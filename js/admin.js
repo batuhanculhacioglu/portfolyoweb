@@ -23,7 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Gönderileri yükle
 async function loadPosts() {
     try {
-        const response = await fetch('http://localhost:3001/api/posts');
+        const API_BASE = window.location.origin.includes('localhost')
+            ? 'http://localhost:3001'
+            : window.location.origin;
+        const response = await fetch(`${API_BASE}/api/posts`);
 
         if (!response.ok) {
             throw new Error('API yanıt vermedi');

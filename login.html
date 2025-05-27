@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Girişi - Portfolyo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/login.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Admin Girişi</h1>
+                <p>Portfolyo yönetim paneline erişim</p>
+            </div>
+
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı</label>
+                    <input type="text" id="username" name="username" required autocomplete="username"
+                        placeholder="Admin kullanıcı adınız">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Şifre</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" name="password" required autocomplete="current-password"
+                            placeholder="Şifrenizi girin">
+                        <button type="button" class="toggle-password" id="togglePassword">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group remember-me">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe">
+                        <span>Beni hatırla</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-login">
+                    Giriş Yap
+                </button>
+
+                <div class="login-error" id="loginError" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span id="errorMessage">Hatalı kullanıcı adı veya şifre</span>
+                </div>
+            </form>
+
+            <div class="login-footer">
+                <a href="/">← Ana Sayfaya Dön</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/login.js"></script>
+</body>
+
+</html>

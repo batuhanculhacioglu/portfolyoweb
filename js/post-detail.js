@@ -34,6 +34,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // URL'den post ID'sini al
 function getPostIdFromUrl() {
+    // URL formatı: /post/123
+    const pathParts = window.location.pathname.split('/');
+    if (pathParts[1] === 'post' && pathParts[2]) {
+        return pathParts[2];
+    }
+
+    // Eski format desteği: ?id=123
     const params = new URLSearchParams(window.location.search);
     return params.get('id');
 }
@@ -59,7 +66,10 @@ async function loadPost(postId) {
 // Tüm gönderileri yükle (navigasyon için)
 async function loadAllPosts() {
     try {
-        const response = await fetch('http://localhost:3001/api/posts');
+        const API_BASE = window.location.origin.includes('localhost')
+            ? 'http://localhost:3001'
+            : window.location.origin;
+        const response = await fetch(`${API_BASE}/api/posts`);
         const data = await response.json();
         allPosts = data.posts || [];
 
@@ -165,7 +175,7 @@ function displayRelatedPosts() {
     relatedPosts.innerHTML = filtered.map(post => {
         const date = new Date(post.date).toLocaleDateString('tr-TR');
         return `
-            <a href="post.html?id=${post.id}" class="related-post-item">
+            <a href="/post/${post.id}" class="related-post-item">
                 <div class="related-post-title">${escapeHtml(post.title)}</div>
                 <div class="related-post-date">${date}</div>
             </a>
@@ -182,7 +192,7 @@ function setupNavigation() {
         const prevPost = allPosts[currentIndex + 1];
         prevPostBtn.style.display = 'flex';
         prevPostBtn.onclick = () => {
-            window.location.href = `post.html?id=${prevPost.id}`;
+            window.location.href = `/post/${prevPost.id}`;
         };
     }
 
@@ -191,7 +201,7 @@ function setupNavigation() {
         const nextPost = allPosts[currentIndex - 1];
         nextPostBtn.style.display = 'flex';
         nextPostBtn.onclick = () => {
-            window.location.href = `post.html?id=${nextPost.id}`;
+            window.location.href = `/post/${nextPost.id}`;
         };
     }
 }

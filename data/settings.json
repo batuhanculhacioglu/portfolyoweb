@@ -1,0 +1,15 @@
+{
+  "theme": {
+    "primaryColor": "#6b73ff",
+    "secondaryColor": "#ff6b9d",
+    "accentColor": "#4ecdc4",
+    "bgPrimary": "#faf9f7",
+    "bgSecondary": "#ffffff",
+    "darkMode": false
+  },
+  "site": {
+    "title": "Gömülü Yazılım Portfolyom",
+    "description": "Mikrodenetleyiciler, RTOS ve IoT sistemleri üzerine çalışıyorum.",
+    "keywords": "gömülü yazılım, embedded, IoT, STM32, ESP32"
+  }
+}

@@ -17,17 +17,46 @@ const loading = document.getElementById('loading');
 
 // Sayfa yüklendiğinde başlat
 document.addEventListener('DOMContentLoaded', async () => {
+    await loadSettings();
     await loadPosts();
     await loadProfile();
     setupEventListeners();
     renderPosts();
 });
 
+// Site ayarlarını yükle
+async function loadSettings() {
+    try {
+        const response = await fetch('http://localhost:3001/api/settings');
+        const settings = await response.json();
+
+        // Tema renklerini uygula
+        if (settings.theme) {
+            const root = document.documentElement;
+            root.style.setProperty('--primary-color', settings.theme.primaryColor);
+            root.style.setProperty('--secondary-color', settings.theme.secondaryColor);
+            root.style.setProperty('--accent-color', settings.theme.accentColor);
+            root.style.setProperty('--bg-primary', settings.theme.bgPrimary);
+            root.style.setProperty('--bg-secondary', settings.theme.bgSecondary);
+        }
+
+        // Site başlığını güncelle
+        if (settings.site) {
+            document.title = settings.site.title || 'Gömülü Yazılım Portfolyom';
+        }
+    } catch (error) {
+        console.error('Ayarlar yüklenirken hata:', error);
+    }
+}
+
 // Gönderileri yükle
 async function loadPosts() {
     try {
         // Backend API'den gönderileri çek
-        const response = await fetch('http://localhost:3001/api/posts');
+        const API_BASE = window.location.origin.includes('localhost')
+            ? 'http://localhost:3001'
+            : window.location.origin;
+        const response = await fetch(`${API_BASE}/api/posts`);
 
         if (!response.ok) {
             throw new Error('API yanıt vermedi');
@@ -216,7 +245,7 @@ function createPostCard(post) {
 
     // Tıklama olayı - detay sayfasına yönlendir
     card.addEventListener('click', () => {
-        window.location.href = `post.html?id=${post.id}`;
+        window.location.href = `/post/${post.id}`;
     });
 
     return card;
