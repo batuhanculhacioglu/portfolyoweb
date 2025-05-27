@@ -116,6 +116,7 @@ function getPostIdFromUrl() {
 // Quill editörünü başlat
 async function initQuillEditor() {
     return new Promise((resolve) => {
+        const ImageResize = window.ImageResize;
         // Quill modüllerini yapılandır
         const toolbarOptions = [
             [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
@@ -143,6 +144,9 @@ async function initQuillEditor() {
                         image: imageHandler,
                         video: videoHandler
                     }
+                },
+                imageResize: {
+                    modules: ['Resize', 'DisplaySize']
                 },
                 history: {
                     delay: 1000,

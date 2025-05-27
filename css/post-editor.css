@@ -781,3 +781,13 @@
 .char-limit-warning {
     color: #F56565 !important;
 }
+
+/* Resim Boyutlandırma Tutamaçları */
+.ql-image-resize-handle {
+    background: var(--primary-color) !important;
+    border: 2px solid white !important;
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    cursor: nwse-resize !important;
+}

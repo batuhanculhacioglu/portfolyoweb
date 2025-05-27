@@ -4,7 +4,7 @@
       "id": 1,
       "title": "STM32 ile RTOS Kullanımı",
       "summary": "FreeRTOS kullanarak STM32 mikrodenetleyicilerde çoklu görev yönetimi nasıl yapılır?",
-      "content": "<p># STM32 ve FreeRTOS\n\nBu yazıda STM32F4 serisi mikrodenetleyicilerde FreeRTOS kullanımını inceleyeceğiz.\n\n## Neden RTOS?\n\nGömülü sistemlerde gerçek zamanlı işletim sistemi kullanmak, özellikle karmaşık projelerde büyük avantajlar sağlar:\n\n- **Çoklu görev yönetimi**: Birden fazla görevi eş zamanlı yönetebilme\n- **Zaman kritik uygulamalar**: Deterministik davranış\n- **Kaynak yönetimi**: Bellek ve CPU kullanımının optimize edilmesi\n\n## Kurulum Adımları\n\n1. STM32CubeIDE'yi açın\n2. Yeni proje oluşturun\n3. Middleware sekmesinden FreeRTOS'u aktif edin\n4. Task'ları ve önceliklerini ayarlayın\n\n## Örnek Kod\n\n```c\n// LED yanıp sönme görevi\nvoid StartLEDTask(void const * argument) {\n    for(;;) {\n        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);\n        osDelay(1000);\n    }\n}\n\n// UART üzerinden veri gönderme görevi\nvoid StartUARTTask(void const * argument) {\n    char msg[] = \"Hello from FreeRTOS\\r\\n\";\n    for(;;) {\n        HAL_UART_Transmit(&amp;huart2, (uint8_t*)msg, strlen(msg), 100);\n        osDelay(2000);\n    }\n}\n```\n\n## Dikkat Edilmesi Gerekenler\n\n- Stack boyutlarını doğru ayarlayın\n- Task önceliklerini mantıklı belirleyin\n- Kritik bölgelerde interrupt'ları devre dışı bırakın\n\nDaha fazla bilgi için FreeRTOS dokümantasyonunu inceleyebilirsiniz.</p>",
+      "content": "<p># STM32 ve FreeRTOS\n\nBu yazıda STM32F4 serisi mikrodenetleyicilerde FreeRTOS kullanımını inceleyeceğiz.\n\n## Neden RTOS?\n<img src=\"/assets/img/1748380379008-217061933.jpg\" style=\"\" width=\"170\">\nGömülü sistemlerde gerçek zamanlı işletim sistemi kullanmak, özellikle karmaşık projelerde büyük avantajlar sağlar:\n\n- **Çoklu görev yönetimi**: Birden fazla görevi eş zamanlı yönetebilme\n- **Zaman kritik uygulamalar**: Deterministik davranış\n- **Kaynak yönetimi**: Bellek ve CPU kullanımının optimize edilmesi\n\n## Kurulum Adımları\n\n1. STM32CubeIDE'yi açın\n2. Yeni proje oluşturun\n3. Middleware sekmesinden FreeRTOS'u aktif edin\n4. Task'ları ve önceliklerini ayarlayın\n\n## Örnek Kod\n\n```c\n// LED yanıp sönme görevi\nvoid StartLEDTask(void const * argument) {\n    for(;;) {\n        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);\n        osDelay(1000);\n    }\n}\n\n// UART üzerinden veri gönderme görevi\nvoid StartUARTTask(void const * argument) {\n    char msg[] = \"Hello from FreeRTOS\\r\\n\";\n    for(;;) {\n        HAL_UART_Transmit(&amp;huart2, (uint8_t*)msg, strlen(msg), 100);\n        osDelay(2000);\n    }\n}\n```\n\n## Dikkat Edilmesi Gerekenler\n\n- Stack boyutlarını doğru ayarlayın\n- Task önceliklerini mantıklı belirleyin\n- Kritik bölgelerde interrupt'ları devre dışı bırakın\n\nDaha fazla bilgi için FreeRTOS dokümantasyonunu inceleyebilirsiniz.</p>",
       "tags": [
         "STM32",
         "RTOS",
@@ -14,7 +14,7 @@
       ],
       "date": "2025-01-15T10:30:00Z",
       "views": 167,
-      "updatedDate": "2025-05-27T20:02:04.854Z"
+      "updatedDate": "2025-05-27T21:14:22.024Z"
     },
     {
       "id": 2,
