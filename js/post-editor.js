@@ -1,105 +1,45 @@
-// post-editor.js - Gelişmiş Post Editörü JavaScript (Quill.js ile)
+// post-editor.js - Düzeltilmiş Post Editörü
 
 // Global değişkenler
-let authToken = null;
-let currentPostId = null;
-let quillEditor = null;
-let cropperInstance = null;
-let isDirty = false;
-let autosaveTimer = null;
-let currentPost = {};
-
-// API Base URL
-const API_BASE = window.location.origin.includes('localhost')
-    ? 'http://localhost:3001'
-    : window.location.origin;
+let editor = null;
+let currentPost = null;
+let editingPostId = null;
+let autoSaveInterval = null;
+let authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+let isEditorReady = false;
 
 // DOM elementleri
-const elements = {
-    // Header
-    backBtn: document.getElementById('backBtn'),
-    saveStatus: document.getElementById('saveStatus'),
-    previewBtn: document.getElementById('previewBtn'),
-    saveBtn: document.getElementById('saveBtn'),
-    saveBtnText: document.getElementById('saveBtnText'),
-    publishBtn: document.getElementById('publishBtn'),
-
-    // Content
-    postTitle: document.getElementById('postTitle'),
-    postTags: document.getElementById('postTags'),
-    postExcerpt: document.getElementById('postExcerpt'),
-    postSlug: document.getElementById('postSlug'),
-    postStatus: document.getElementById('postStatus'),
-
-    // Image upload
-    featuredImageArea: document.getElementById('featuredImageArea'),
-    featuredImageInput: document.getElementById('featuredImageInput'),
-
-    // Stats
-    wordCount: document.getElementById('wordCount'),
-    charCount: document.getElementById('charCount'),
-    readTime: document.getElementById('readTime'),
-    excerptCount: document.getElementById('excerptCount'),
-
-    // SEO
-    seoTitle: document.getElementById('seoTitle'),
-    seoUrl: document.getElementById('seoUrl'),
-    seoDescription: document.getElementById('seoDescription'),
-
-    // Modals
-    previewModal: document.getElementById('previewModal'),
-    closePreview: document.getElementById('closePreview'),
-    previewContent: document.getElementById('previewContent'),
-
-    imageCropModal: document.getElementById('imageCropModal'),
-    closeCrop: document.getElementById('closeCrop'),
-    cropImage: document.getElementById('cropImage'),
-    cropCancel: document.getElementById('cropCancel'),
-    cropSave: document.getElementById('cropSave'),
-
-    // Other
-    loadingOverlay: document.getElementById('loadingOverlay'),
-    autosaveIndicator: document.getElementById('autosaveIndicator')
-};
-
-// Sayfa yüklendiğinde
-document.addEventListener('DOMContentLoaded', async () => {
-    // Auth kontrolü
-    if (!checkAuth()) {
-        window.location.href = '/login';
-        return;
-    }
-
-    // URL'den post ID'sini al
-    currentPostId = getPostIdFromUrl();
-
-    // Quill editörünü başlat
-    await initQuillEditor();
-
-    // Event listener'ları kur
-    setupEventListeners();
-
-    // Eğer düzenleme modundaysa, post'u yükle
-    if (currentPostId) {
-        await loadPost();
-        elements.saveBtnText.textContent = 'Güncelle';
-        elements.publishBtn.style.display = 'inline-flex';
-    } else {
-        elements.saveBtnText.textContent = 'Kaydet';
-        updateSEOPreview();
-    }
-
-    // Auto-save'i başlat
-    startAutoSave();
-});
+const backBtn = document.getElementById('backBtn');
+const saveBtn = document.getElementById('saveBtn');
+const previewBtn = document.getElementById('previewBtn');
+const publishBtn = document.getElementById('publishBtn');
+const postTitle = document.getElementById('postTitle');
+const postTags = document.getElementById('postTags');
+const postExcerpt = document.getElementById('postExcerpt');
+const postSlug = document.getElementById('postSlug');
+const postStatus = document.getElementById('postStatus');
+const saveStatus = document.getElementById('saveStatus');
+const saveBtnText = document.getElementById('saveBtnText');
+const previewModal = document.getElementById('previewModal');
+const previewContent = document.getElementById('previewContent');
+const closePreview = document.getElementById('closePreview');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const autosaveIndicator = document.getElementById('autosaveIndicator');
+const excerptCount = document.getElementById('excerptCount');
+const wordCount = document.getElementById('wordCount');
+const charCount = document.getElementById('charCount');
+const readTime = document.getElementById('readTime');
 
 // Auth kontrolü
 function checkAuth() {
-    authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    return !!authToken;
+    if (!authToken) {
+        window.location.href = '/login';
+        return false;
+    }
+    return true;
 }
 
-// API header'ları
+// API istekleri için header
 function getAuthHeaders() {
     return {
         'Content-Type': 'application/json',
@@ -107,701 +47,820 @@ function getAuthHeaders() {
     };
 }
 
-// URL'den post ID'sini al
-function getPostIdFromUrl() {
+// API Base URL'ini belirle
+function getApiBase() {
+    return window.location.origin.includes('localhost')
+        ? 'http://localhost:3001'
+        : window.location.origin;
+}
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!checkAuth()) return;
+
+    // URL'den düzenleme modunu kontrol et
     const params = new URLSearchParams(window.location.search);
-    return params.get('id');
+    editingPostId = params.get('id');
+
+    // Event listener'ları kur
+    setupEventListeners();
+
+    // TinyMCE'yi başlat
+    await initializeTinyMCE();
+
+    // Düzenleme modunda gönderiyi yükle
+    if (editingPostId) {
+        await loadPost(editingPostId);
+        saveBtnText.textContent = 'Güncelle';
+        publishBtn.style.display = 'block';
+    }
+
+    // Auto-save'i başlat
+    startAutoSave();
+
+    // Title textarea auto-resize
+    setupTitleAutoResize();
+});
+
+// Title auto-resize
+function setupTitleAutoResize() {
+    postTitle.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
 }
 
-// Quill editörünü başlat
-async function initQuillEditor() {
-    return new Promise((resolve) => {
-        const ImageResize = window.ImageResize;
-        // Quill modüllerini yapılandır
-        const toolbarOptions = [
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'font': [] }],
-            [{ 'size': ['small', false, 'large', 'huge'] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'script': 'sub' }, { 'script': 'super' }],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'direction': 'rtl' }],
-            [{ 'align': [] }],
-            ['link', 'image', 'video'],
-            ['clean']
-        ];
+// TinyMCE Başlatma - Düzeltilmiş
+async function initializeTinyMCE() {
+    return new Promise((resolve, reject) => {
+        tinymce.init({
+            selector: '#editor',
+            height: '100%',
 
-        quillEditor = new Quill('#quillEditor', {
-            theme: 'snow',
-            placeholder: 'Yazınızı buraya yazmaya başlayın...',
-            modules: {
-                toolbar: {
-                    container: toolbarOptions,
-                    handlers: {
-                        image: imageHandler,
-                        video: videoHandler
-                    }
-                },
-                imageResize: {
-                    modules: ['Resize', 'DisplaySize']
-                },
-                history: {
-                    delay: 1000,
-                    maxStack: 50,
-                    userOnly: true
+            // Temel plugin'ler
+            plugins: [
+                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
+                'template', 'codesample', 'pagebreak', 'nonbreaking', 'quickbars',
+                'save', 'autosave', 'directionality'
+            ],
+
+            // Toolbar - 2 satır
+            toolbar: [
+                'undo redo | blocks fontsize | bold italic underline strikethrough | forecolor backcolor | align lineheight',
+                'numlist bullist indent outdent | link image media table codesample | charmap emoticons | fullscreen preview code help'
+            ],
+
+            // Hızlı araçlar
+            quickbars_selection_toolbar: 'bold italic | quicklink h2 h3 blockquote',
+            quickbars_insert_toolbar: 'quickimage quicktable',
+            contextmenu: 'link image table',
+
+            // Font ayarları
+            font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
+
+            // Blok formatları
+            block_formats: 'Paragraf=p; Başlık 1=h1; Başlık 2=h2; Başlık 3=h3; Başlık 4=h4; Başlık 5=h5; Başlık 6=h6; Kod=pre',
+
+            // Resim özellikleri
+            image_advtab: true,
+            image_caption: true,
+            image_title: true,
+            image_class_list: [
+                { title: 'Normal', value: '' },
+                { title: 'Sol hizala', value: 'img-left' },
+                { title: 'Sağ hizala', value: 'img-right' },
+                { title: 'Ortala', value: 'img-center' }
+            ],
+
+            // Tablo özellikleri
+            table_responsive_width: true,
+            table_default_attributes: { border: '1' },
+            table_default_styles: { 'border-collapse': 'collapse', width: '100%' },
+
+            // Link özellikleri
+            link_assume_external_targets: true,
+            link_context_toolbar: true,
+
+            // Code sample dilleri - embedded odaklı
+            codesample_languages: [
+                { text: 'HTML/XML', value: 'markup' },
+                { text: 'JavaScript', value: 'javascript' },
+                { text: 'CSS', value: 'css' },
+                { text: 'Python', value: 'python' },
+                { text: 'C', value: 'c' },
+                { text: 'C++', value: 'cpp' },
+                { text: 'Arduino', value: 'arduino' },
+                { text: 'JSON', value: 'json' },
+                { text: 'Bash', value: 'bash' }
+            ],
+
+            // Content style
+            content_style: `
+                body { 
+                    font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; 
+                    font-size: 16px; 
+                    line-height: 1.7; 
+                    color: #2D3748;
+                    padding: 20px;
+                    max-width: none;
                 }
+                h1, h2, h3, h4, h5, h6 { 
+                    font-weight: 600; 
+                    margin-top: 2rem; 
+                    margin-bottom: 1rem; 
+                    line-height: 1.2;
+                }
+                h1 { font-size: 2.5rem; }
+                h2 { font-size: 2rem; }
+                h3 { font-size: 1.75rem; }
+                p { margin-bottom: 1.5rem; }
+                img { 
+                    max-width: 100%; 
+                    height: auto; 
+                    border-radius: 8px; 
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }
+                .img-left { float: left; margin: 0 1.5rem 1rem 0; }
+                .img-right { float: right; margin: 0 0 1rem 1.5rem; }
+                .img-center { display: block; margin: 2rem auto; }
+                blockquote { 
+                    border-left: 4px solid #6B73FF; 
+                    padding-left: 1.5rem; 
+                    margin: 2rem 0; 
+                    font-style: italic; 
+                    background: #F8F5F2; 
+                    padding: 1.5rem 2rem; 
+                    border-radius: 8px; 
+                }
+                code { 
+                    background: #f1f3f4; 
+                    padding: 0.2rem 0.4rem; 
+                    border-radius: 4px; 
+                    font-family: 'Courier New', monospace; 
+                }
+                pre { 
+                    background: #2d2d2d; 
+                    color: #f8f8f2; 
+                    padding: 1.5rem; 
+                    border-radius: 8px; 
+                    overflow-x: auto; 
+                    margin: 2rem 0; 
+                }
+                table { 
+                    border-collapse: collapse; 
+                    width: 100%; 
+                    margin: 2rem 0; 
+                    background: white; 
+                    border-radius: 8px; 
+                    overflow: hidden; 
+                }
+                table th, table td { 
+                    padding: 0.75rem; 
+                    text-align: left; 
+                    border-bottom: 1px solid #E2E8F0; 
+                }
+                table th { 
+                    background: #F8F5F2; 
+                    font-weight: 600; 
+                }
+                a { color: #6B73FF; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+            `,
+
+            // Diğer ayarlar
+            menubar: false,
+            branding: false,
+            statusbar: true,
+            elementpath: false,
+            resize: false,
+
+            // Auto save
+            autosave_ask_before_unload: false,
+            autosave_interval: '30s',
+            autosave_restore_when_empty: false,
+
+            // File picker
+            file_picker_callback: function (cb, value, meta) {
+                const input = document.createElement('input');
+                input.setAttribute('type', 'file');
+                input.setAttribute('accept', meta.filetype === 'image' ? 'image/*' : '*/*');
+
+                input.onchange = function () {
+                    const file = this.files[0];
+                    if (file) {
+                        uploadFile(file, cb);
+                    }
+                };
+
+                input.click();
+            },
+
+            // Paste işlemleri
+            paste_data_images: true,
+            paste_as_text: false,
+            smart_paste: true,
+
+            // Setup callback - Düzeltilmiş
+            setup: function (ed) {
+                editor = ed;
+
+                ed.on('init', function () {
+                    console.log('TinyMCE initialized');
+                    isEditorReady = true;
+
+                    // Eğer önceden yüklenmiş içerik varsa, şimdi set et
+                    if (currentPost && currentPost.content) {
+                        console.log('Setting content after init:', currentPost.title);
+                        ed.setContent(currentPost.content);
+                    }
+
+                    updateStats();
+                    resolve();
+                });
+
+                ed.on('input keyup', function () {
+                    updateStats();
+                    setSaveStatus('unsaved');
+                });
+
+                ed.on('paste', function () {
+                    setTimeout(updateStats, 100);
+                    setSaveStatus('unsaved');
+                });
+
+                ed.on('change', function () {
+                    updateStats();
+                    setSaveStatus('unsaved');
+                });
+            },
+
+            // Error handler
+            init_instance_callback: function (editor) {
+                console.log('Editor initialized: ' + editor.id);
             }
+        }).catch(error => {
+            console.error('TinyMCE initialization error:', error);
+            reject(error);
         });
-
-        // Event listener'lar
-        quillEditor.on('text-change', function (delta, oldDelta, source) {
-            if (source === 'user') {
-                isDirty = true;
-                updateStats();
-                updateSEOPreview();
-                showAutosaving();
-            }
-        });
-
-        // Başlatma tamamlandı
-        setTimeout(() => {
-            resolve();
-            updateStats();
-        }, 100);
     });
 }
 
-// Resim yükleme handler'ı
-function imageHandler() {
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
-    input.click();
-
-    input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            showNotification('Lütfen bir resim dosyası seçin', 'error');
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır', 'error');
-            return;
-        }
-
-        try {
-            showLoading(true);
-
-            const formData = new FormData();
-            formData.append('image', file);
-
-            const response = await fetch(`${API_BASE}/api/upload`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('Yükleme başarısız');
-
-            const data = await response.json();
-
-            // Resmi editöre ekle
-            const range = quillEditor.getSelection(true);
-            quillEditor.insertEmbed(range.index, 'image', data.path);
-            quillEditor.setSelection(range.index + 1);
-
-            showNotification('Resim yüklendi!', 'success');
-        } catch (error) {
-            console.error('Resim yükleme hatası:', error);
-            showNotification('Resim yüklenemedi', 'error');
-        } finally {
-            showLoading(false);
-        }
-    };
-}
-
-// Video yükleme handler'ı
-function videoHandler() {
-    const url = prompt('Video URL\'sini girin (YouTube, Vimeo, vb.):');
-    if (url) {
-        const range = quillEditor.getSelection(true);
-        quillEditor.insertEmbed(range.index, 'video', url);
-        quillEditor.setSelection(range.index + 1);
-    }
-}
-
-// Event listener'ları kur
-function setupEventListeners() {
-    // Header butonları
-    elements.backBtn.addEventListener('click', handleBack);
-    elements.previewBtn.addEventListener('click', showPreview);
-    elements.saveBtn.addEventListener('click', savePost);
-    elements.publishBtn.addEventListener('click', publishPost);
-
-    // Form değişiklikleri
-    elements.postTitle.addEventListener('input', handleTitleChange);
-    elements.postTags.addEventListener('input', updateSEOPreview);
-    elements.postExcerpt.addEventListener('input', handleExcerptChange);
-    elements.postSlug.addEventListener('input', updateSEOPreview);
-    elements.postStatus.addEventListener('change', () => isDirty = true);
-
-    // Resim yükleme
-    elements.featuredImageArea.addEventListener('click', () => {
-        elements.featuredImageInput.click();
-    });
-    elements.featuredImageInput.addEventListener('change', handleFeaturedImageUpload);
-
-    // Modal kontrolleri
-    elements.closePreview.addEventListener('click', () => {
-        elements.previewModal.classList.remove('show');
-    });
-
-    elements.closeCrop.addEventListener('click', closeCropModal);
-    elements.cropCancel.addEventListener('click', closeCropModal);
-    elements.cropSave.addEventListener('click', applyCrop);
-
-    // Modal dışına tıklama ile kapatma
-    elements.previewModal.addEventListener('click', (e) => {
-        if (e.target === elements.previewModal) {
-            elements.previewModal.classList.remove('show');
-        }
-    });
-
-    elements.imageCropModal.addEventListener('click', (e) => {
-        if (e.target === elements.imageCropModal) {
-            closeCropModal();
-        }
-    });
-
-    // Klavye kısayolları
-    document.addEventListener('keydown', handleKeyboardShortcuts);
-
-    // Sayfa kapatma uyarısı
-    window.addEventListener('beforeunload', handleBeforeUnload);
-}
-
-// Başlık değişikliği
-function handleTitleChange() {
-    isDirty = true;
-    const title = elements.postTitle.value;
-
-    // Slug'ı otomatik oluştur
-    if (!currentPostId || !elements.postSlug.value) {
-        const slug = generateSlug(title);
-        elements.postSlug.value = slug;
-    }
-
-    updateSEOPreview();
-    showAutosaving();
-}
-
-// Özet değişikliği
-function handleExcerptChange() {
-    isDirty = true;
-    const excerpt = elements.postExcerpt.value;
-    const count = excerpt.length;
-
-    elements.excerptCount.textContent = count;
-
-    // Karakter sınırı uyarısı
-    if (count > 160) {
-        elements.excerptCount.classList.add('char-limit-warning');
-    } else {
-        elements.excerptCount.classList.remove('char-limit-warning');
-    }
-
-    updateSEOPreview();
-    showAutosaving();
-}
-
-// Slug oluştur
-function generateSlug(title) {
-    return title
-        .toLowerCase()
-        .replace(/ğ/g, 'g')
-        .replace(/ü/g, 'u')
-        .replace(/ş/g, 's')
-        .replace(/ı/g, 'i')
-        .replace(/ö/g, 'o')
-        .replace(/ç/g, 'c')
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
-}
-
-// İstatistikleri güncelle
-function updateStats() {
-    if (!quillEditor) return;
-
-    const text = quillEditor.getText();
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    const chars = text.length;
-    const readTime = Math.ceil(words / 200); // 200 kelime/dakika
-
-    elements.wordCount.textContent = words.toLocaleString();
-    elements.charCount.textContent = chars.toLocaleString();
-    elements.readTime.textContent = `${readTime} dk`;
-}
-
-// SEO önizlemesini güncelle
-function updateSEOPreview() {
-    const title = elements.postTitle.value || 'Yazı Başlığı';
-    const slug = elements.postSlug.value || 'yazinin-url-adresi';
-    const excerpt = elements.postExcerpt.value || 'Yazı özeti burada görünecek...';
-
-    elements.seoTitle.textContent = title;
-    elements.seoUrl.textContent = `${window.location.origin}/post/${slug}`;
-    elements.seoDescription.textContent = excerpt;
-}
-
-// Otomatik kaydetmeyi başlat
-function startAutoSave() {
-    autosaveTimer = setInterval(() => {
-        if (isDirty && (elements.postTitle.value.trim() || (quillEditor && quillEditor.getText().trim()))) {
-            autoSave();
-        }
-    }, 30000); // 30 saniyede bir
-}
-
-// Otomatik kaydetme
-async function autoSave() {
-    if (!isDirty) return;
-
-    try {
-        showAutosaving();
-        await savePost(true);
-        showSaveStatus('Otomatik kaydedildi', 'saved');
-    } catch (error) {
-        console.error('Otomatik kaydetme hatası:', error);
-        showSaveStatus('Kaydetme hatası', 'error');
-    }
-}
-
-// Kaydetme durumunu göster
-function showAutosaving() {
-    elements.autosaveIndicator.classList.add('show');
-    setTimeout(() => {
-        elements.autosaveIndicator.classList.remove('show');
-    }, 2000);
-}
-
-// Kaydetme durumu
-function showSaveStatus(message, type) {
-    elements.saveStatus.textContent = message;
-    elements.saveStatus.className = `save-status ${type}`;
-}
-
-// Post'u yükle (düzenleme modu)
-async function loadPost() {
-    try {
-        showLoading(true);
-
-        const response = await fetch(`${API_BASE}/api/posts/${currentPostId}`);
-        if (!response.ok) throw new Error('Post bulunamadı');
-
-        currentPost = await response.json();
-
-        // Form alanlarını doldur
-        elements.postTitle.value = currentPost.title || '';
-        elements.postTags.value = currentPost.tags ? currentPost.tags.join(', ') : '';
-        elements.postExcerpt.value = currentPost.summary || '';
-        elements.postSlug.value = currentPost.slug || generateSlug(currentPost.title || '');
-        elements.postStatus.value = currentPost.status || 'draft';
-
-        // Quill editörüne içeriği yükle
-        if (quillEditor) {
-            quillEditor.root.innerHTML = currentPost.content || '';
-        }
-
-        // Öne çıkan görseli göster
-        if (currentPost.featuredImage) {
-            showFeaturedImage(currentPost.featuredImage);
-        }
-
-        updateStats();
-        updateSEOPreview();
-        isDirty = false;
-
-        showSaveStatus('Yüklendi', 'saved');
-
-    } catch (error) {
-        console.error('Post yükleme hatası:', error);
-        showNotification('Post yüklenemedi: ' + error.message, 'error');
-        handleBack();
-    } finally {
-        showLoading(false);
-    }
-}
-
-// Post'u kaydet
-async function savePost(isAutoSave = false) {
-    try {
-        if (!isAutoSave) showLoading(true);
-
-        const postData = {
-            title: elements.postTitle.value.trim(),
-            summary: elements.postExcerpt.value.trim(),
-            content: quillEditor ? quillEditor.root.innerHTML : '',
-            tags: elements.postTags.value.split(',').map(tag => tag.trim()).filter(tag => tag),
-            slug: elements.postSlug.value.trim(),
-            status: elements.postStatus.value,
-            featuredImage: currentPost.featuredImage || null
-        };
-
-        // Validasyon
-        if (!postData.title) {
-            throw new Error('Başlık gereklidir');
-        }
-
-        let response;
-        if (currentPostId) {
-            // Güncelleme
-            response = await fetch(`${API_BASE}/api/posts/${currentPostId}`, {
-                method: 'PUT',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(postData)
-            });
-        } else {
-            // Yeni post
-            response = await fetch(`${API_BASE}/api/posts`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(postData)
-            });
-        }
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Kaydetme başarısız');
-        }
-
-        const savedPost = await response.json();
-
-        // Yeni post ise ID'yi güncelle
-        if (!currentPostId) {
-            currentPostId = savedPost.id;
-            // URL'yi güncelle
-            window.history.replaceState({}, '', `/post-editor?id=${currentPostId}`);
-            elements.publishBtn.style.display = 'inline-flex';
-        }
-
-        currentPost = savedPost;
-        isDirty = false;
-
-        if (!isAutoSave) {
-            showNotification(currentPostId ? 'Post güncellendi!' : 'Post kaydedildi!', 'success');
-            showSaveStatus('Kaydedildi', 'saved');
-        }
-
-    } catch (error) {
-        console.error('Kaydetme hatası:', error);
-        if (!isAutoSave) {
-            showNotification('Kaydetme hatası: ' + error.message, 'error');
-        }
-        showSaveStatus('Hata', 'error');
-        throw error;
-    } finally {
-        if (!isAutoSave) showLoading(false);
-    }
-}
-
-// Post'u yayınla
-async function publishPost() {
-    try {
-        await savePost();
-
-        // Durumu published yap
-        elements.postStatus.value = 'published';
-        await savePost();
-
-        showNotification('Post yayınlandı!', 'success');
-
-    } catch (error) {
-        console.error('Yayınlama hatası:', error);
-        showNotification('Yayınlama hatası: ' + error.message, 'error');
-    }
-}
-
-// Önizleme göster
-function showPreview() {
-    const title = elements.postTitle.value || 'Başlık Girilmedi';
-    const content = quillEditor ? quillEditor.root.innerHTML : '';
-    const tags = elements.postTags.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-    const excerpt = elements.postExcerpt.value;
-
-    const previewHtml = `
-        <h1>${escapeHtml(title)}</h1>
-        <div class="preview-meta">
-            <span>📅 ${new Date().toLocaleDateString('tr-TR')}</span>
-            <span>👁️ 0 görüntülenme</span>
-            <span>⏱️ ${elements.readTime.textContent} okuma</span>
-        </div>
-        ${excerpt ? `<div class="preview-excerpt"><strong>Özet:</strong> ${escapeHtml(excerpt)}</div>` : ''}
-        ${tags.length ? `<div class="preview-tags">${tags.map(tag => `<span class="preview-tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
-        <hr style="margin: 2rem 0; border: none; height: 2px; background: var(--border-color);">
-        <div class="preview-content-body">${content}</div>
-    `;
-
-    elements.previewContent.innerHTML = previewHtml;
-    elements.previewModal.classList.add('show');
-
-    // Highlight.js ile kod bloklarını vurgula
-    if (typeof hljs !== 'undefined') {
-        elements.previewContent.querySelectorAll('pre code').forEach((block) => {
-            hljs.highlightElement(block);
-        });
-    }
-}
-
-// Öne çıkan görsel yükleme
-function handleFeaturedImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Dosya kontrolü
-    if (!file.type.startsWith('image/')) {
-        showNotification('Lütfen bir resim dosyası seçin', 'error');
-        return;
-    }
-
+// Dosya yükleme fonksiyonu
+async function uploadFile(file, callback) {
+    // Dosya boyutu kontrolü (5MB)
     if (file.size > 5 * 1024 * 1024) {
         showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır', 'error');
         return;
     }
 
-    // Kırpma modalını aç
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        elements.cropImage.src = e.target.result;
-        elements.imageCropModal.classList.add('show');
-
-        // Cropper'ı başlat
-        if (cropperInstance) {
-            cropperInstance.destroy();
-        }
-
-        cropperInstance = new Cropper(elements.cropImage, {
-            aspectRatio: 16 / 9,
-            viewMode: 2,
-            dragMode: 'move',
-            autoCropArea: 1,
-            cropBoxMovable: true,
-            cropBoxResizable: true,
-            toggleDragModeOnDblclick: false,
-            responsive: true,
-            restore: false,
-            checkCrossOrigin: false,
-            checkOrientation: false,
-            modal: true,
-            guides: true,
-            center: true,
-            highlight: true,
-            background: true,
-            rotatable: true,
-            scalable: true,
-            zoomable: true,
-            zoomOnTouch: true,
-            zoomOnWheel: true,
-            wheelZoomRatio: 0.1,
-            cropBoxData: null,
-            canvasData: null,
-        });
-    };
-    reader.readAsDataURL(file);
-}
-
-// Kırpma modal kapat
-function closeCropModal() {
-    elements.imageCropModal.classList.remove('show');
-    if (cropperInstance) {
-        cropperInstance.destroy();
-        cropperInstance = null;
-    }
-    // Input'u temizle
-    elements.featuredImageInput.value = '';
-}
-
-// Kırpma uygula
-async function applyCrop() {
-    if (!cropperInstance) return;
+    const formData = new FormData();
+    formData.append('image', file);
 
     try {
-        showLoading(true);
-
-        // Kırpılmış resmi al
-        const canvas = cropperInstance.getCroppedCanvas({
-            width: 1200,
-            height: 675,
-            imageSmoothingQuality: 'high'
+        const response = await fetch(`${getApiBase()}/api/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: formData
         });
 
-        // Canvas'ı blob'a çevir
-        canvas.toBlob(async (blob) => {
-            try {
-                // Dosyayı yükle
-                const formData = new FormData();
-                formData.append('image', blob, 'featured-image.jpg');
-
-                const response = await fetch(`${API_BASE}/api/upload`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error('Yükleme başarısız');
-
-                const data = await response.json();
-                currentPost.featuredImage = data.path;
-
-                showFeaturedImage(data.path);
-                closeCropModal();
-                isDirty = true;
-
-                showNotification('Öne çıkan görsel yüklendi!', 'success');
-
-            } catch (error) {
-                console.error('Görsel yükleme hatası:', error);
-                showNotification('Görsel yüklenemedi: ' + error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }, 'image/jpeg', 0.9);
-
+        if (response.ok) {
+            const data = await response.json();
+            callback(data.path, { alt: file.name });
+            showNotification('Dosya yüklendi!', 'success');
+        } else {
+            throw new Error('Yükleme başarısız');
+        }
     } catch (error) {
-        console.error('Kırpma hatası:', error);
-        showNotification('Görsel işlenemedi', 'error');
-        showLoading(false);
+        console.error('Dosya yükleme hatası:', error);
+        showNotification('Dosya yüklenemedi', 'error');
     }
 }
 
-// Öne çıkan görseli göster
-function showFeaturedImage(imagePath) {
-    elements.featuredImageArea.innerHTML = `
-        <div class="image-preview">
-            <img src="${imagePath}" alt="Öne çıkan görsel">
-            <div class="image-actions">
-                <button class="btn-edit" onclick="editFeaturedImage()">Değiştir</button>
-                <button class="btn-remove" onclick="removeFeaturedImage()">Kaldır</button>
-            </div>
-        </div>
-    `;
-}
-
-// Öne çıkan görseli düzenle
-window.editFeaturedImage = function () {
-    elements.featuredImageInput.click();
-};
-
-// Öne çıkan görseli kaldır
-window.removeFeaturedImage = function () {
-    if (confirm('Öne çıkan görseli kaldırmak istediğinizden emin misiniz?')) {
-        currentPost.featuredImage = null;
-        elements.featuredImageArea.innerHTML = `
-            <div class="image-placeholder">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                    <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
-                <p>Görsel yüklemek için tıklayın</p>
-                <small>JPG, PNG, GIF (Max 5MB)</small>
-            </div>
-        `;
-        isDirty = true;
-        showNotification('Öne çıkan görsel kaldırıldı', 'info');
-    }
-};
-
-// Klavye kısayolları
-function handleKeyboardShortcuts(e) {
-    // Ctrl+S - Kaydet
-    if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        savePost();
-    }
-
-    // Ctrl+Shift+P - Önizleme
-    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-        e.preventDefault();
-        showPreview();
-    }
-
-    // ESC - Modal kapat
-    if (e.key === 'Escape') {
-        if (elements.previewModal.classList.contains('show')) {
-            elements.previewModal.classList.remove('show');
-        }
-        if (elements.imageCropModal.classList.contains('show')) {
-            closeCropModal();
-        }
-    }
-}
-
-// Geri dön
-function handleBack() {
-    if (isDirty) {
-        if (confirm('Kaydedilmemiş değişiklikler var. Çıkmak istediğinizden emin misiniz?')) {
+// Event listener'ları kur
+function setupEventListeners() {
+    // Geri butonu
+    backBtn.addEventListener('click', () => {
+        if (saveStatus.textContent === 'Kaydedilmedi') {
+            if (confirm('Kaydedilmemiş değişiklikler var. Çıkmak istediğinizden emin misiniz?')) {
+                window.location.href = '/admin';
+            }
+        } else {
             window.location.href = '/admin';
         }
+    });
+
+    // Kaydet butonu
+    saveBtn.addEventListener('click', savePost);
+
+    // Önizleme butonu
+    previewBtn.addEventListener('click', showPreview);
+
+    // Yayınla butonu
+    publishBtn.addEventListener('click', publishPost);
+
+    // Modal kapatma
+    closePreview.addEventListener('click', () => {
+        previewModal.classList.remove('show');
+    });
+
+    previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) {
+            previewModal.classList.remove('show');
+        }
+    });
+
+    // Başlık değişimi
+    postTitle.addEventListener('input', (e) => {
+        generateSlug(e.target.value);
+        setSaveStatus('unsaved');
+    });
+
+    // Özet karakter sayısı
+    postExcerpt.addEventListener('input', (e) => {
+        const count = e.target.value.length;
+        excerptCount.textContent = count;
+        excerptCount.className = count > 160 ? 'char-limit-warning' : '';
+        setSaveStatus('unsaved');
+    });
+
+    // Diğer form elemanları
+    [postTags, postSlug, postStatus].forEach(element => {
+        element.addEventListener('input', () => setSaveStatus('unsaved'));
+        element.addEventListener('change', () => setSaveStatus('unsaved'));
+    });
+
+    // Klavye kısayolları
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 's') {
+                e.preventDefault();
+                savePost();
+            } else if (e.key === 'p') {
+                e.preventDefault();
+                showPreview();
+            }
+        }
+
+        if (e.key === 'Escape') {
+            previewModal.classList.remove('show');
+        }
+    });
+}
+
+// Mevcut gönderiyi yükle - Düzeltilmiş
+async function loadPost(postId) {
+    try {
+        console.log('Loading post:', postId);
+
+        const response = await fetch(`${getApiBase()}/api/posts/${postId}`);
+
+        if (response.ok) {
+            currentPost = await response.json();
+            console.log('Post loaded:', currentPost.title);
+
+            // Formu doldur
+            populateForm();
+        } else {
+            const errorText = await response.text();
+            console.error('Failed to load post:', response.status, errorText);
+            showNotification('Gönderi yüklenemedi: ' + response.status, 'error');
+        }
+    } catch (error) {
+        console.error('Gönderi yükleme hatası:', error);
+        showNotification('Gönderi yüklenemedi: ' + error.message, 'error');
+    }
+}
+
+// Formu doldur - Düzeltilmiş
+function populateForm() {
+    if (!currentPost) {
+        console.log('No current post to populate');
+        return;
+    }
+
+    console.log('Populating form with:', currentPost.title);
+
+    // Form alanlarını doldur
+    postTitle.value = currentPost.title || '';
+    postTags.value = currentPost.tags ? currentPost.tags.join(', ') : '';
+    postExcerpt.value = currentPost.summary || '';
+    postSlug.value = currentPost.slug || generateSlug(currentPost.title) || '';
+    postStatus.value = currentPost.status || 'draft';
+
+    // Title auto-resize
+    postTitle.style.height = 'auto';
+    postTitle.style.height = postTitle.scrollHeight + 'px';
+
+    // TinyMCE içeriğini ayarla - Editör hazır olana kadar bekle
+    if (isEditorReady && editor) {
+        console.log('Setting editor content immediately');
+        editor.setContent(currentPost.content || '');
     } else {
-        window.location.href = '/admin';
+        console.log('Editor not ready, content will be set when ready');
+        // İçerik editör hazır olduğunda setup callback'inde set edilecek
+    }
+
+    // Özet karakterini güncelle
+    const excerptLength = (currentPost.summary || '').length;
+    excerptCount.textContent = excerptLength;
+    excerptCount.className = excerptLength > 160 ? 'char-limit-warning' : '';
+
+    setSaveStatus('saved');
+    updateStats();
+}
+
+// URL slug oluştur
+function generateSlug(title) {
+    if (!title) return '';
+
+    const turkishChars = {
+        'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G',
+        'ı': 'i', 'I': 'I', 'İ': 'i', 'ş': 's',
+        'Ş': 'S', 'ü': 'u', 'Ü': 'U', 'ö': 'o', 'Ö': 'O'
+    };
+
+    let slug = title.toLowerCase();
+
+    // Türkçe karakterleri değiştir
+    for (let char in turkishChars) {
+        slug = slug.replace(new RegExp(char, 'g'), turkishChars[char]);
+    }
+
+    slug = slug
+        .replace(/[^a-z0-9\s-]/g, '') // Özel karakterleri kaldır
+        .replace(/\s+/g, '-') // Boşlukları tire ile değiştir
+        .replace(/-+/g, '-') // Çoklu tireleri tek tire yap
+        .replace(/^-|-$/g, '') // Başlangıç ve bitiş tirelerini kaldır
+        .substring(0, 50); // Maksimum 50 karakter
+
+    if (postSlug) {
+        postSlug.value = slug;
+    }
+    return slug;
+}
+
+// İstatistikleri güncelle
+function updateStats() {
+    if (!editor || !isEditorReady) return;
+
+    const content = editor.getContent({ format: 'text' });
+    const words = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+    const chars = content.length;
+    const readingTime = Math.max(1, Math.ceil(words / 175)); // 175 kelime/dakika
+
+    wordCount.textContent = words.toLocaleString('tr-TR');
+    charCount.textContent = chars.toLocaleString('tr-TR');
+    readTime.textContent = `${readingTime} dk`;
+}
+
+// Kaydet durumunu ayarla
+function setSaveStatus(status) {
+    const statusElement = document.getElementById('saveStatus');
+    if (!statusElement) return;
+
+    statusElement.className = `save-status ${status}`;
+
+    const statusTexts = {
+        'saving': 'Kaydediliyor...',
+        'saved': 'Kaydedildi',
+        'unsaved': 'Kaydedilmedi',
+        'error': 'Hata!'
+    };
+
+    statusElement.textContent = statusTexts[status] || status;
+
+    // Save butonunu güncelle
+    if (saveBtn) {
+        saveBtn.disabled = status === 'saving';
     }
 }
 
-// Sayfa kapatma uyarısı
-function handleBeforeUnload(e) {
-    if (isDirty) {
-        const message = 'Kaydedilmemiş değişiklikler var. Sayfayı kapatmak istediğinizden emin misiniz?';
-        e.returnValue = message;
-        return message;
+// Auto-save başlat
+function startAutoSave() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+    }
+
+    autoSaveInterval = setInterval(() => {
+        const statusText = document.getElementById('saveStatus')?.textContent;
+        if (statusText === 'Kaydedilmedi' && postTitle.value.trim()) {
+            autoSave();
+        }
+    }, 30000); // 30 saniye
+}
+
+// Otomatik kaydet
+async function autoSave() {
+    if (!postTitle.value.trim()) return;
+
+    const indicator = document.getElementById('autosaveIndicator');
+    if (indicator) {
+        indicator.classList.add('show');
+    }
+
+    try {
+        await savePost(true);
+        setTimeout(() => {
+            if (indicator) {
+                indicator.classList.remove('show');
+            }
+        }, 2000);
+    } catch (error) {
+        if (indicator) {
+            indicator.classList.remove('show');
+        }
+        console.error('Auto-save hatası:', error);
     }
 }
 
-// Yardımcı fonksiyonlar
-function showLoading(show) {
-    elements.loadingOverlay.style.display = show ? 'flex' : 'none';
+// Gönderiyi kaydet - Düzeltilmiş
+async function savePost(isAutoSave = false) {
+    // Validasyon
+    if (!postTitle.value.trim()) {
+        if (!isAutoSave) {
+            showNotification('Başlık gereklidir', 'error');
+            postTitle.focus();
+        }
+        return;
+    }
+
+    if (!postExcerpt.value.trim()) {
+        if (!isAutoSave) {
+            showNotification('Özet gereklidir', 'error');
+            postExcerpt.focus();
+        }
+        return;
+    }
+
+    if (!isAutoSave) {
+        setSaveStatus('saving');
+        loadingOverlay.classList.add('show');
+    }
+
+    const postData = {
+        title: postTitle.value.trim(),
+        summary: postExcerpt.value.trim(),
+        content: editor && isEditorReady ? editor.getContent() : '',
+        tags: postTags.value.split(',').map(tag => tag.trim()).filter(tag => tag),
+        status: postStatus.value,
+        slug: postSlug.value.trim() || generateSlug(postTitle.value)
+    };
+
+    try {
+        const url = editingPostId
+            ? `${getApiBase()}/api/posts/${editingPostId}`
+            : `${getApiBase()}/api/posts`;
+        const method = editingPostId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: getAuthHeaders(),
+            body: JSON.stringify(postData)
+        });
+
+        if (response.ok) {
+            const savedPost = await response.json();
+            currentPost = savedPost;
+
+            if (!editingPostId) {
+                editingPostId = savedPost.id;
+                saveBtnText.textContent = 'Güncelle';
+                publishBtn.style.display = 'block';
+                // URL'yi güncelle
+                history.replaceState({}, '', `/post-editor?id=${savedPost.id}`);
+            }
+
+            setSaveStatus('saved');
+
+            if (!isAutoSave) {
+                showNotification('Gönderi kaydedildi!', 'success');
+            }
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Kaydetme başarısız');
+        }
+    } catch (error) {
+        console.error('Kaydetme hatası:', error);
+        setSaveStatus('error');
+
+        if (!isAutoSave) {
+            showNotification(`Gönderi kaydedilemedi: ${error.message}`, 'error');
+        }
+    } finally {
+        if (!isAutoSave) {
+            loadingOverlay.classList.remove('show');
+        }
+    }
 }
 
-function showNotification(message, type = 'info') {
+// Gönderiyi yayınla
+async function publishPost() {
+    // Validasyon
+    if (!postTitle.value.trim() || !postExcerpt.value.trim()) {
+        showNotification('Başlık ve özet gereklidir', 'error');
+        return;
+    }
+
+    const wordCountNum = parseInt(wordCount.textContent.replace(/\./g, ''));
+    if (wordCountNum < 100) {
+        if (!confirm('Yazı çok kısa görünüyor (100 kelimeden az). Yayınlamak istediğinizden emin misiniz?')) {
+            return;
+        }
+    }
+
+    postStatus.value = 'published';
+    await savePost();
+
+    if (currentPost && currentPost.id) {
+        showNotification('Gönderi yayınlandı!', 'success');
+
+        // Yayınlanan yazıyı görmek ister misiniz?
+        setTimeout(() => {
+            if (confirm('Yayınlanan yazıyı görüntülemek ister misiniz?')) {
+                window.open(`/post/${currentPost.id}`, '_blank');
+            }
+        }, 1000);
+    }
+}
+
+// Önizleme göster - Düzeltilmiş
+function showPreview() {
+    if (!editor || !isEditorReady) {
+        showNotification('Editör henüz hazır değil', 'warning');
+        return;
+    }
+
+    const title = postTitle.value || 'Başlıksız Yazı';
+    const content = editor.getContent();
+    const tags = postTags.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+    const excerpt = postExcerpt.value;
+    const currentDate = new Date().toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    // Önizleme içeriğini oluştur
+    previewContent.innerHTML = `
+        <article class="preview-content">
+            <!-- Başlık ve Meta Bilgiler -->
+            <header style="margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 2px solid #E2E8F0;">
+                <h1 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #2D3748; line-height: 1.2;">
+                    ${escapeHtml(title)}
+                </h1>
+                
+                <div class="preview-meta">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        ${currentDate}
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14,2 14,8 20,8"></polyline>
+                        </svg>
+                        ${wordCount.textContent} kelime
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        ${readTime.textContent} okuma
+                    </span>
+                    <span style="color: ${postStatus.value === 'published' ? '#48BB78' : '#F56565'}; font-weight: 500;">
+                        ${postStatus.value === 'published' ? '✓ Yayında' : '⚠ Taslak'}
+                    </span>
+                </div>
+
+                ${excerpt ? `
+                    <div class="preview-excerpt">
+                        <div style="font-weight: 600; color: #6B73FF; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                            Özet
+                        </div>
+                        <p style="margin: 0; font-style: italic; font-size: 1.05rem; color: #4A5568;">
+                            ${escapeHtml(excerpt)}
+                        </p>
+                    </div>
+                ` : ''}
+
+                ${tags.length > 0 ? `
+                    <div class="preview-tags">
+                        ${tags.map(tag => `
+                            <span class="preview-tag">#${escapeHtml(tag)}</span>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </header>
+
+            <!-- İçerik -->
+            <div class="preview-content-body">
+                ${content || '<p style="color: #718096; font-style: italic;">İçerik henüz yazılmamış...</p>'}
+            </div>
+
+            <!-- Footer -->
+            <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #E2E8F0; color: #718096; font-size: 0.9rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Son güncelleme: ${new Date().toLocaleString('tr-TR')}</span>
+                    <span>URL: /post/${editingPostId || 'yeni'}</span>
+                </div>
+            </footer>
+        </article>
+    `;
+
+    previewModal.classList.add('show');
+}
+
+// Bildirim göster
+function showNotification(message, type = 'info', duration = 3000) {
+    // Mevcut bildirimleri temizle
+    document.querySelectorAll('.notification').forEach(notif => notif.remove());
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.textContent = message;
+
+    const icons = {
+        success: '✓',
+        error: '✗',
+        warning: '⚠',
+        info: 'ⓘ'
+    };
+
+    const colors = {
+        success: '#48BB78',
+        error: '#F56565',
+        warning: '#ED8936',
+        info: '#4299E1'
+    };
+
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 24px;
+                height: 24px;
+                background: rgba(255,255,255,0.2);
+                border-radius: 50%;
+                font-weight: bold;
+            ">${icons[type] || icons.info}</span>
+            <span>${message}</span>
+        </div>
+    `;
 
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        padding: 1rem 2rem;
-        background: ${type === 'success' ? '#48BB78' : type === 'error' ? '#F56565' : type === 'info' ? '#4299E1' : '#ED8936'};
+        padding: 1rem 1.5rem;
+        background: ${colors[type] || colors.info};
         color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         z-index: 9999;
-        animation: slideIn 0.3s ease;
-        max-width: 400px;
+        animation: slideInNotification 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        font-family: Inter, sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        max-width: 350px;
         word-wrap: break-word;
+        cursor: pointer;
     `;
 
     document.body.appendChild(notification);
 
+    // Otomatik kaldırma
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 4000);
+        notification.style.animation = 'slideOutNotification 0.3s ease-in';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    }, duration);
+
+    // Tıklayarak kapat
+    notification.addEventListener('click', () => {
+        notification.style.animation = 'slideOutNotification 0.3s ease-in';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    });
 }
 
+// HTML escape fonksiyonu
 function escapeHtml(text) {
+    if (!text) return '';
     const map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -812,136 +871,102 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Animasyonlar için CSS ekle
-const style = document.createElement('style');
-style.textContent = `
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
-
-.modal.show {
-    display: flex;
-}
-
-.btn-edit {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-}
-
-.btn-edit:hover {
-    background: #5a62e6;
-}
-
-.btn-remove {
-    background: #F56565;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-}
-
-.btn-remove:hover {
-    background: #E53E3E;
-}
-
-/* Quill Snow Theme Overrides */
-.ql-snow .ql-tooltip {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.ql-snow .ql-tooltip input[type=text] {
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 0.5rem;
-}
-
-.ql-snow .ql-tooltip a.ql-action,
-.ql-snow .ql-tooltip a.ql-remove {
-    background: var(--primary-color);
-    color: white;
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-    text-decoration: none;
-    margin-left: 0.5rem;
-}
-
-.ql-snow .ql-tooltip a.ql-remove {
-    background: #F56565;
-}
-
-/* Loading spinner */
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Preview modal scrollbar */
-.modal-preview .modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modal-preview .modal-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-.modal-preview .modal-body::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-.modal-preview .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-`;
-document.head.appendChild(style);
-
-// Temizlik
-window.addEventListener('beforeunload', () => {
-    if (autosaveTimer) {
-        clearInterval(autosaveTimer);
-    }
-    if (quillEditor) {
-        // Quill otomatik temizlik yapıyor
-    }
-    if (cropperInstance) {
-        cropperInstance.destroy();
+// Sayfa kapatılırken uyar
+window.addEventListener('beforeunload', (e) => {
+    const statusText = document.getElementById('saveStatus')?.textContent;
+    if (statusText === 'Kaydedilmedi') {
+        e.preventDefault();
+        e.returnValue = 'Kaydedilmemiş değişiklikler var. Sayfayı kapatmak istediğinizden emin misiniz?';
+        return e.returnValue;
     }
 });
+
+// Sayfa görünürlük değiştiğinde auto-save
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && document.getElementById('saveStatus')?.textContent === 'Kaydedilmedi') {
+        autoSave();
+    }
+});
+
+// Debounce fonksiyonu
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Animasyonlar için CSS ekleme
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInNotification {
+        from {
+            transform: translateX(100%) translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutNotification {
+        from {
+            transform: translateX(0) translateY(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%) translateY(-50px);
+            opacity: 0;
+        }
+    }
+
+    /* Title textarea auto-resize */
+    .title-input {
+        min-height: 60px;
+        max-height: 200px;
+        overflow-y: hidden;
+        resize: none;
+    }
+
+    /* Custom scrollbar for preview */
+    .modal-preview .modal-content {
+        scrollbar-width: thin;
+        scrollbar-color: #6B73FF #F1F3F4;
+    }
+
+    .modal-preview .modal-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .modal-preview .modal-content::-webkit-scrollbar-track {
+        background: #F1F3F4;
+        border-radius: 4px;
+    }
+
+    .modal-preview .modal-content::-webkit-scrollbar-thumb {
+        background: #6B73FF;
+        border-radius: 4px;
+    }
+
+    .modal-preview .modal-content::-webkit-scrollbar-thumb:hover {
+        background: #5a62e6;
+    }
+`;
+
+document.head.appendChild(style);
+
+// Performance monitoring (development only)
+if (window.location.hostname === 'localhost') {
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const loadTime = performance.now();
+            console.log(`Post editor loaded in ${loadTime.toFixed(2)}ms`);
+        }, 100);
+    });
+}

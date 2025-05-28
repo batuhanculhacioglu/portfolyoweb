@@ -1,4 +1,4 @@
-// post-detail.js - Gönderi detay sayfası için JavaScript
+// post-detail.js - Düzeltilmiş Gönderi detay sayfası için JavaScript
 
 // Global değişkenler
 let currentPost = null;
@@ -48,7 +48,11 @@ function getPostIdFromUrl() {
 // Gönderiyi yükle
 async function loadPost(postId) {
     try {
-        const response = await fetch(`http://localhost:3001/api/posts/${postId}`);
+        const API_BASE = window.location.origin.includes('localhost')
+            ? 'http://localhost:3001'
+            : window.location.origin;
+
+        const response = await fetch(`${API_BASE}/api/posts/${postId}`);
 
         if (!response.ok) {
             throw new Error('Gönderi bulunamadı');
@@ -103,46 +107,131 @@ function displayPost() {
         ).join('');
     }
 
-    // İçerik (Markdown'ı HTML'e çevir)
-    if (typeof marked !== 'undefined') {
-        // Marked ayarları
-        marked.setOptions({
-            highlight: function (code, lang) {
-                if (typeof Prism !== 'undefined' && Prism.languages[lang]) {
-                    return Prism.highlight(code, Prism.languages[lang], lang);
-                }
-                return code;
-            },
-            breaks: true,
-            gfm: true
-        });
-
-        postContent.innerHTML = marked.parse(currentPost.content);
+    // İçerik - TinyMCE HTML içeriğini direkt kullan
+    if (currentPost.content) {
+        // HTML içeriğini güvenli bir şekilde temizle ve resim yollarını düzelt
+        let processedContent = processPostContent(currentPost.content);
+        postContent.innerHTML = processedContent;
     } else {
-        // Marked yoksa düz metin olarak göster
-        postContent.innerHTML = `<pre>${escapeHtml(currentPost.content)}</pre>`;
+        postContent.innerHTML = '<p>İçerik bulunamadı.</p>';
     }
 
     // Loading'i gizle, içeriği göster
     postLoading.style.display = 'none';
     postDetail.style.display = 'block';
 
-    // Kod bloklarını highlight et
+    // Kod bloklarını highlight et (eğer Prism varsa)
     if (typeof Prism !== 'undefined') {
-        Prism.highlightAll();
+        setTimeout(() => {
+            Prism.highlightAll();
+        }, 100);
     }
+}
+
+// Post içeriğini işle ve resim yollarını düzelt
+function processPostContent(content) {
+    // HTML içeriği olduğunu varsayarak işle
+    let processedContent = content;
+
+    // Markdown benzeri işaretleri HTML'e çevir (eski içerikler için)
+    processedContent = convertMarkdownToHtml(processedContent);
+
+    // Resim yollarını düzelt
+    processedContent = fixImagePaths(processedContent);
+
+    // Boş paragrafları temizle
+    processedContent = cleanEmptyParagraphs(processedContent);
+
+    return processedContent;
+}
+
+// Markdown benzeri işaretleri HTML'e çevir (eski içerikler için)
+function convertMarkdownToHtml(content) {
+    // Bu fonksiyon sadece mevcut markdown işaretlerini temizlemek için
+    return content
+        // Başlıkları çevir
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+
+        // Kalın ve italik
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+
+        // Kod blokları
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+
+        // Linkler
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+
+        // Paragrafları ayır
+        .split('\n\n')
+        .map(paragraph => {
+            paragraph = paragraph.trim();
+            if (!paragraph) return '';
+
+            // Eğer zaten HTML tag'i varsa olduğu gibi bırak
+            if (paragraph.startsWith('<')) return paragraph;
+
+            // Aksi halde paragraf tag'i ekle
+            return `<p>${paragraph}</p>`;
+        })
+        .join('\n');
+}
+
+// Resim yollarını düzelt
+function fixImagePaths(content) {
+    const API_BASE = window.location.origin.includes('localhost')
+        ? 'http://localhost:3001'
+        : window.location.origin;
+
+    return content.replace(
+        /<img([^>]*?)src=["']([^"']*?)["']([^>]*?)>/g,
+        (match, beforeSrc, src, afterSrc) => {
+            // Eğer src zaten tam URL ise dokunma
+            if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+                return match;
+            }
+
+            // Eğer / ile başlıyorsa base URL ekle
+            if (src.startsWith('/')) {
+                return `<img${beforeSrc}src="${API_BASE}${src}"${afterSrc}>`;
+            }
+
+            // Eğer assets/ ile başlıyorsa önüne / ekle
+            if (src.startsWith('assets/')) {
+                return `<img${beforeSrc}src="${API_BASE}/${src}"${afterSrc}>`;
+            }
+
+            // Diğer durumlar için olduğu gibi bırak
+            return match;
+        }
+    );
+}
+
+// Boş paragrafları temizle
+function cleanEmptyParagraphs(content) {
+    return content
+        .replace(/<p>\s*<\/p>/g, '')
+        .replace(/<p>&nbsp;<\/p>/g, '')
+        .replace(/\n\s*\n/g, '\n');
 }
 
 // Görüntülenme sayısını artır
 async function updateViewCount() {
     try {
+        const API_BASE = window.location.origin.includes('localhost')
+            ? 'http://localhost:3001'
+            : window.location.origin;
+
         // Görüntülenme sayısını artır
         const updatedPost = {
             ...currentPost,
             views: (currentPost.views || 0) + 1
         };
 
-        await fetch(`http://localhost:3001/api/posts/${currentPost.id}`, {
+        await fetch(`${API_BASE}/api/posts/${currentPost.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
