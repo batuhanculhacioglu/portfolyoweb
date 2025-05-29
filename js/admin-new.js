@@ -35,14 +35,6 @@ function checkAuth() {
     return !!authToken;
 }
 
-// API istekleri için header
-function getAuthHeaders() {
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-    };
-}
-
 // Event listener'ları kur
 function setupEventListeners() {
     // Menü navigasyonu
@@ -101,9 +93,9 @@ async function loadAllData() {
     try {
         // Paralel yükleme
         const [postsRes, profileRes, settingsRes] = await Promise.all([
-            fetch('/api/posts'),
-            fetch('/api/profile'),
-            fetch('/api/settings')
+            fetch(`${API_CONFIG.BASE_URL}/api/posts`),
+            fetch(`${API_CONFIG.BASE_URL}/api/profile`),
+            fetch(`${API_CONFIG.BASE_URL}/api/settings`)
         ]);
 
         const postsData = await postsRes.json();
@@ -120,7 +112,7 @@ async function loadAllData() {
 
     } catch (error) {
         console.error('Veri yükleme hatası:', error);
-        showNotification('Veriler yüklenirken hata oluştu', 'error');
+        UTILS.showNotification('Veriler yüklenirken hata oluştu', 'error');
     }
 }
 
@@ -143,7 +135,7 @@ function updateDashboard() {
     const recentPostsHtml = recentPosts.map(post => `
         <div class="recent-post-item">
             <div>
-                <h4>${escapeHtml(post.title)}</h4>
+                <h4>${UTILS.escapeHtml(post.title)}</h4>
                 <small>${new Date(post.date).toLocaleDateString('tr-TR')} - ${post.views || 0} görüntülenme</small>
             </div>
             <button class="btn btn-sm btn-secondary" onclick="editPost(${post.id})">Düzenle</button>
@@ -166,8 +158,8 @@ function renderPostsTable() {
         <tr>
             <td>
                 <div style="display: flex; flex-direction: column;">
-                    <strong>${escapeHtml(post.title)}</strong>
-                    <small style="color: var(--text-secondary);">${escapeHtml(post.summary || '')}</small>
+                    <strong>${UTILS.escapeHtml(post.title)}</strong>
+                    <small style="color: var(--text-secondary);">${UTILS.escapeHtml(post.summary || '')}</small>
                 </div>
             </td>
             <td>${new Date(post.date).toLocaleDateString('tr-TR')}</td>
@@ -226,13 +218,13 @@ window.deletePost = async function (postId) {
     if (!confirm(confirmMessage)) return;
 
     try {
-        const response = await fetch(`/api/posts/${postId}`, {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/posts/${postId}`, {
             method: 'DELETE',
-            headers: getAuthHeaders()
+            headers: API_CONFIG.getAuthHeaders()
         });
 
         if (response.ok) {
-            showNotification('Yazı silindi!', 'success');
+            UTILS.showNotification('Yazı silindi!', 'success');
             await loadAllData();
             renderPostsTable();
             updateDashboard();
@@ -241,7 +233,7 @@ window.deletePost = async function (postId) {
         }
     } catch (error) {
         console.error('Yazı silme hatası:', error);
-        showNotification('Yazı silinemedi', 'error');
+        UTILS.showNotification('Yazı silinemedi', 'error');
     }
 };
 
@@ -272,21 +264,21 @@ async function handleProfileSubmit(e) {
     };
 
     try {
-        const response = await fetch('/api/profile', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/profile`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers: API_CONFIG.getAuthHeaders(),
             body: JSON.stringify(profileData)
         });
 
         if (response.ok) {
             currentProfile = profileData;
-            showNotification('Profil güncellendi!', 'success');
+            UTILS.showNotification('Profil güncellendi!', 'success');
         } else {
             throw new Error('Güncelleme başarısız');
         }
     } catch (error) {
         console.error('Profil güncelleme hatası:', error);
-        showNotification('Profil güncellenemedi', 'error');
+        UTILS.showNotification('Profil güncellenemedi', 'error');
     }
 }
 
@@ -297,12 +289,12 @@ async function handleImageUpload(e) {
 
     // Dosya kontrolü
     if (!file.type.startsWith('image/')) {
-        showNotification('Lütfen bir resim dosyası seçin', 'error');
+        UTILS.showNotification('Lütfen bir resim dosyası seçin', 'error');
         return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-        showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır', 'error');
+        UTILS.showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır', 'error');
         return;
     }
 
@@ -310,7 +302,7 @@ async function handleImageUpload(e) {
     formData.append('image', file);
 
     try {
-        const response = await fetch('/api/upload', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/upload`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`
@@ -322,13 +314,13 @@ async function handleImageUpload(e) {
             const data = await response.json();
             currentProfile.image = data.path;
             document.getElementById('profileImagePreview').src = data.path;
-            showNotification('Resim yüklendi!', 'success');
+            UTILS.showNotification('Resim yüklendi!', 'success');
         } else {
             throw new Error('Yükleme başarısız');
         }
     } catch (error) {
         console.error('Resim yükleme hatası:', error);
-        showNotification('Resim yüklenemedi', 'error');
+        UTILS.showNotification('Resim yüklenemedi', 'error');
     }
 }
 
@@ -405,22 +397,22 @@ async function handleThemeSubmit(e) {
             site: currentSettings
         };
 
-        const response = await fetch('/api/settings', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/settings`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers: API_CONFIG.getAuthHeaders(),
             body: JSON.stringify(settingsData)
         });
 
         if (response.ok) {
             currentTheme = themeData;
-            showNotification('Tema ayarları güncellendi!', 'success');
+            UTILS.showNotification('Tema ayarları güncellendi!', 'success');
             applyTheme(themeData);
         } else {
             throw new Error('Güncelleme başarısız');
         }
     } catch (error) {
         console.error('Tema güncelleme hatası:', error);
-        showNotification('Tema güncellenemedi', 'error');
+        UTILS.showNotification('Tema güncellenemedi', 'error');
     }
 }
 
@@ -446,7 +438,7 @@ function resetTheme() {
 
     currentTheme = defaultTheme;
     updateThemeForm();
-    showNotification('Tema varsayılan değerlere döndürüldü', 'info');
+    UTILS.showNotification('Tema varsayılan değerlere döndürüldü', 'info');
 }
 
 // Site ayarları formu güncelle
@@ -475,21 +467,21 @@ async function handleSettingsSubmit(e) {
             site: siteData
         };
 
-        const response = await fetch('/api/settings', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/settings`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers: API_CONFIG.getAuthHeaders(),
             body: JSON.stringify(settingsData)
         });
 
         if (response.ok) {
             currentSettings = siteData;
-            showNotification('Site ayarları güncellendi!', 'success');
+            UTILS.showNotification('Site ayarları güncellendi!', 'success');
         } else {
             throw new Error('Güncelleme başarısız');
         }
     } catch (error) {
         console.error('Ayar güncelleme hatası:', error);
-        showNotification('Ayarlar güncellenemedi', 'error');
+        UTILS.showNotification('Ayarlar güncellenemedi', 'error');
     }
 }
 
@@ -502,45 +494,6 @@ function logout() {
         sessionStorage.removeItem('adminUser');
         window.location.href = '/login';
     }
-}
-
-// Bildirim göster
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 2rem;
-        background: ${type === 'success' ? '#48BB78' : type === 'error' ? '#F56565' : '#4299E1'};
-        color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 9999;
-        animation: slideIn 0.3s ease;
-    `;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// HTML escape
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 // Animasyonlar için CSS ekle

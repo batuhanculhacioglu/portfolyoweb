@@ -31,7 +31,7 @@ function checkExistingAuth() {
 // Token doğrulama
 async function verifyToken(token) {
     try {
-        const response = await fetch('http://localhost:3001/api/auth/verify', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/verify`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -92,7 +92,7 @@ async function handleLogin(e) {
 
     try {
         // API'ye giriş isteği gönder
-        const response = await fetch('http://localhost:3001/api/auth/login', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

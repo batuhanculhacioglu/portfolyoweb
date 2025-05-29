@@ -7,12 +7,13 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = 3001;
 
 // Güvenlik için secret key (production'da environment variable kullanın)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
 
 // Dosya yükleme için multer ayarları
 const storage = multer.diskStorage({
@@ -40,13 +41,6 @@ const upload = multer({
         }
     }
 });
-
-// Admin kullanıcı bilgileri (production'da veritabanı kullanın)
-const ADMIN_CREDENTIALS = {
-    username: 'admin',
-    // Şifre: "Admin123!" (bcrypt ile hashlenmiş)
-    passwordHash: '$2a$10$YourHashHere' // Bu değer aşağıda oluşturulacak
-};
 
 // Middleware
 app.use(cors());

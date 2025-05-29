@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Site ayarlarını yükle
 async function loadSettings() {
     try {
-        const response = await fetch('http://localhost:3001/api/settings');
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/settings`);
         const settings = await response.json();
 
         // Tema renklerini uygula
@@ -53,10 +53,7 @@ async function loadSettings() {
 async function loadPosts() {
     try {
         // Backend API'den gönderileri çek
-        const API_BASE = window.location.origin.includes('localhost')
-            ? 'http://localhost:3001'
-            : window.location.origin;
-        const response = await fetch(`${API_BASE}/api/posts`);
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/posts`);
 
         if (!response.ok) {
             throw new Error('API yanıt vermedi');
@@ -93,7 +90,7 @@ async function loadPosts() {
 // Profil bilgilerini yükle
 async function loadProfile() {
     try {
-        const response = await fetch('http://localhost:3001/api/profile');
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/profile`);
 
         if (response.ok) {
             const profile = await response.json();
@@ -234,11 +231,11 @@ function createPostCard(post) {
     card.className = 'post-card';
 
     card.innerHTML = `
-        <h3 class="post-title">${escapeHtml(post.title)}</h3>
-        <p class="post-summary">${escapeHtml(post.summary)}</p>
+        <h3 class="post-title">${UTILS.escapeHtml(post.title)}</h3>
+        <p class="post-summary">${UTILS.escapeHtml(post.summary)}</p>
         <div class="post-tags">
             ${post.tags ? post.tags.map(tag =>
-        `<span class="post-tag">${escapeHtml(tag)}</span>`
+        `<span class="post-tag">${UTILS.escapeHtml(tag)}</span>`
     ).join('') : ''}
         </div>
     `;
@@ -282,16 +279,4 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
-}
-
-// HTML escape fonksiyonu - güvenlik için
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
 }
