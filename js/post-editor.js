@@ -613,6 +613,11 @@ function showPreview() {
         return;
     }
 
+    // Template'i klonla
+    const template = document.getElementById('previewTemplate');
+    const clone = template.content.cloneNode(true);
+
+    // Veri hazırlama
     const title = postTitle.value || 'Başlıksız Yazı';
     const content = editor.getContent();
     const tags = postTags.value.split(',').map(tag => tag.trim()).filter(tag => tag);
@@ -623,73 +628,69 @@ function showPreview() {
         day: 'numeric'
     });
 
-    previewContent.innerHTML = `
-        <article class="preview-content">
-            <header style="margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 2px solid #E2E8F0;">
-                <h1 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #2D3748; line-height: 1.2;">
-                    ${UTILS.escapeHtml(title)}
-                </h1>
-                
-                <div class="preview-meta">
-                    <span style="display: flex; align-items: center; gap: 0.5rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12,6 12,12 16,14"></polyline>
-                        </svg>
-                        ${currentDate}
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 0.5rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14,2 14,8 20,8"></polyline>
-                        </svg>
-                        ${wordCount.textContent} kelime
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 0.5rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12,6 12,12 16,14"></polyline>
-                        </svg>
-                        ${readTime.textContent} okuma
-                    </span>
-                    <span style="color: ${postStatus.value === 'published' ? '#48BB78' : '#F56565'}; font-weight: 500;">
-                        ${postStatus.value === 'published' ? '✓ Yayında' : '⚠ Taslak'}
-                    </span>
-                </div>
+    // Template doldurma
+    clone.querySelector('.preview-title').textContent = title;
 
-                ${excerpt ? `
-                    <div class="preview-excerpt">
-                        <div style="font-weight: 600; color: #6B73FF; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
-                            Özet
-                        </div>
-                        <p style="margin: 0; font-style: italic; font-size: 1.05rem; color: #4A5568;">
-                            ${UTILS.escapeHtml(excerpt)}
-                        </p>
-                    </div>
-                ` : ''}
-
-                ${tags.length > 0 ? `
-                    <div class="preview-tags">
-                        ${tags.map(tag => `
-                            <span class="preview-tag">#${UTILS.escapeHtml(tag)}</span>
-                        `).join('')}
-                    </div>
-                ` : ''}
-            </header>
-
-            <div class="preview-content-body">
-                ${content || '<p style="color: #718096; font-style: italic;">İçerik henüz yazılmamış...</p>'}
-            </div>
-
-            <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #E2E8F0; color: #718096; font-size: 0.9rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>Son güncelleme: ${new Date().toLocaleString('tr-TR')}</span>
-                    <span>URL: /post/${editingPostId || 'yeni'}</span>
-                </div>
-            </footer>
-        </article>
+    // Meta bilgileri
+    clone.querySelector('.preview-meta').innerHTML = `
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>
+            ${currentDate}
+        </span>
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+            </svg>
+            ${wordCount.textContent} kelime
+        </span>
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>
+            ${readTime.textContent} okuma
+        </span>
+        <span class="${postStatus.value === 'published' ? 'status-published' : 'status-draft'}">
+            ${postStatus.value === 'published' ? '✓ Yayında' : '⚠ Taslak'}
+        </span>
     `;
 
+    // Özet
+    if (excerpt) {
+        const excerptDiv = clone.querySelector('.preview-excerpt');
+        excerptDiv.style.display = 'block';
+        excerptDiv.innerHTML = `
+    <div class="excerpt-label">
+        Özet
+    </div>
+    <p class="excerpt-text">
+        ${UTILS.escapeHtml(excerpt)}
+    </p>
+`;
+    }
+
+    // Etiketler
+    if (tags.length > 0) {
+        clone.querySelector('.preview-tags').innerHTML = tags.map(tag =>
+            `<span class="preview-tag">#${UTILS.escapeHtml(tag)}</span>`
+        ).join('');
+    }
+
+    // İçerik
+    clone.querySelector('.preview-content-body').innerHTML = content ||
+        '<p class="text-muted">İçerik henüz yazılmamış...</p>';
+
+    // Footer
+    clone.querySelector('.last-update').textContent = `Son güncelleme: ${new Date().toLocaleString('tr-TR')}`;
+    clone.querySelector('.post-url').textContent = `URL: /post/${editingPostId || 'yeni'}`;
+
+    // Modal'a ekle
+    previewContent.innerHTML = '';
+    previewContent.appendChild(clone);
     previewModal.classList.add('show');
 }
 

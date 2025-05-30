@@ -71,16 +71,16 @@ async function loadPosts() {
 
         // Hata durumunda kullanıcıya bilgi ver
         postsContainer.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
-                <h3>Gönderiler yüklenemedi</h3>
-                <p>Backend sunucunun çalıştığından emin olun.</p>
-                <small>Hata: ${error.message}</small>
-                <br><br>
-                <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: #6B73FF; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    Tekrar Dene
-                </button>
-            </div>
-        `;
+    <div class="error-container">
+        <h3>Gönderiler yüklenemedi</h3>
+        <p>Backend sunucunun çalıştığından emin olun.</p>
+        <small>Hata: ${error.message}</small>
+        <br><br>
+        <button onclick="location.reload()" class="reload-button">
+            Tekrar Dene
+        </button>
+    </div>
+`;
 
         allPosts = [];
         filteredPosts = [];

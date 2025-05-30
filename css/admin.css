@@ -394,3 +394,45 @@
         align-items: flex-start;
     }
 }
+
+.empty-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem;
+}
+
+.post-meta {
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* Admin-new.js'den taşınan ek stiller */
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-danger {
+    background: #F56565;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #E53E3E;
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.table-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 6px;
+}

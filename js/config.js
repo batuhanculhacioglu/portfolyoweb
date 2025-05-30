@@ -30,21 +30,15 @@ const UTILS = {
         const colors = { success: '#48BB78', error: '#F56565', warning: '#ED8936', info: '#4299E1' };
 
         notification.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 50%; font-weight: bold;">
-                    ${icons[type] || icons.info}
-                </span>
-                <span>${message}</span>
-            </div>
-        `;
+    <div class="notification-content">
+        <span class="notification-icon">
+            ${icons[type] || icons.info}
+        </span>
+        <span>${message}</span>
+    </div>
+`;
 
-        notification.style.cssText = `
-            position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem;
-            background: ${colors[type] || colors.info}; color: white; border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15); z-index: 9999;
-            animation: slideInNotification 0.3s ease; font-family: Inter, sans-serif;
-            font-size: 0.9rem; font-weight: 500; max-width: 350px; cursor: pointer;
-        `;
+        notification.className = `notification notification-${type}`;
 
         document.body.appendChild(notification);
 
@@ -80,20 +74,3 @@ const API_UTILS = {
         }
     }
 };
-
-// Animasyonlar için CSS
-if (!document.querySelector('#utils-styles')) {
-    const style = document.createElement('style');
-    style.id = 'utils-styles';
-    style.textContent = `
-        @keyframes slideInNotification {
-            from { transform: translateX(100%) translateY(-50px); opacity: 0; }
-            to { transform: translateX(0) translateY(0); opacity: 1; }
-        }
-        @keyframes slideOutNotification {
-            from { transform: translateX(0) translateY(0); opacity: 1; }
-            to { transform: translateX(100%) translateY(-50px); opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
-}

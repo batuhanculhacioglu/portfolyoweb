@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/utilities.css">
     <link rel="stylesheet" href="/css/post-editor.css">
 </head>
 
@@ -161,6 +162,27 @@
     <!-- Post Editor Script -->
     <script src="/js/config.js"></script>
     <script src="/js/post-editor.js"></script>
+
+    <!-- Preview Template - Hidden -->
+    <template id="previewTemplate">
+        <article class="preview-content">
+            <header class="preview-header">
+                <h1 class="preview-title"></h1>
+                <div class="preview-meta"></div>
+                <div class="preview-excerpt" style="display: none;"></div>
+                <div class="preview-tags"></div>
+            </header>
+            <div class="preview-content-body"></div>
+            <footer class="preview-footer">
+                <div class="footer-content">
+                    <span class="last-update"></span>
+                    <span class="post-url"></span>
+                </div>
+            </footer>
+        </article>
+    </template>
+
+</body>
 </body>
 
 </html>

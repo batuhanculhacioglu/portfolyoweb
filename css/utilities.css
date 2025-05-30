@@ -1,0 +1,256 @@
+/* Notification Stilleri */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    animation: slideInNotification 0.3s ease;
+    font-family: Inter, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    max-width: 350px;
+    cursor: pointer;
+}
+
+.notification-success {
+    background: #48BB78;
+}
+
+.notification-error {
+    background: #F56565;
+}
+
+.notification-warning {
+    background: #ED8936;
+}
+
+.notification-info {
+    background: #4299E1;
+}
+
+/* Animasyonlar */
+@keyframes slideInNotification {
+    from {
+        transform: translateX(100%) translateY(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutNotification {
+    from {
+        transform: translateX(0) translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%) translateY(-50px);
+        opacity: 0;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Reload Button */
+.reload-button {
+    padding: 0.5rem 1rem;
+    background: #6B73FF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.reload-button:hover {
+    background: #5a62e6;
+}
+
+/* Error Container */
+.error-container {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 2rem;
+}
+
+/* Table Action Buttons */
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-danger {
+    background: #F56565;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #E53E3E;
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.table-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 6px;
+}
+
+/* Genel animasyonlar - tüm projede kullanılır */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInNotification {
+    from {
+        transform: translateX(100%) translateY(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutNotification {
+    from {
+        transform: translateX(0) translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%) translateY(-50px);
+        opacity: 0;
+    }
+}
+
+/* Satır içi stillerden çevrilen sınıflar */
+.flex-center {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.flex-center-large {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.notification-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.status-published {
+    color: #48BB78;
+    font-weight: 500;
+}
+
+.status-draft {
+    color: #F56565;
+    font-weight: 500;
+}
+
+.text-muted {
+    color: #718096;
+    font-style: italic;
+}
+
+.preview-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.excerpt-label {
+    font-weight: 600;
+    color: #6B73FF;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.excerpt-text {
+    margin: 0;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: #4A5568;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

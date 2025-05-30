@@ -156,17 +156,3 @@ function showError(message) {
         passwordInput.classList.remove('error');
     }, 3000);
 }
-
-// CSS için hata sınıfı
-const style = document.createElement('style');
-style.textContent = `
-    input.error {
-        border-color: #DC2626 !important;
-        animation: shake 0.5s ease;
-    }
-    
-    input.error:focus {
-        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
-    }
-`;
-document.head.appendChild(style);
